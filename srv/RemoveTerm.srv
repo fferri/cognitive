@@ -1,4 +1,0 @@
-string source
-uint32 id
----
-bool succeeded

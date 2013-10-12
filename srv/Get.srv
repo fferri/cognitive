@@ -1,7 +1,4 @@
 uint32 range_min
 uint32 range_max
 ---
-bool succeeded
-uint32 range_min
-uint32 range_max
 memory/Change[] changes

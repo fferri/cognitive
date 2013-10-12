@@ -17,11 +17,6 @@ from client import MemoryClient
 
 if __name__ == "__main__":
     c = MemoryClient('cmdline')
-    try:
-        term_id = int(sys.argv[1])
-        metas = [c.remove_id(term_id)]
-    except ValueError:
-        term = term_parse(sys.argv[1:])
-        metas = c.remove(term)
-    print "Removed %d terms." % len(metas)
-
+    t = term_parse(sys.argv[2:])
+    meta = c.change(int(sys.argv[1]), t)
+    print "Changed (id=%d)." % meta.term_id

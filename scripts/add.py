@@ -12,25 +12,11 @@ import rospy
 from std_msgs.msg import *
 from memory.msg import *
 from memory.srv import *
+from common import *
+from client import MemoryClient
 
 if __name__ == "__main__":
-    t = Term()
-    t.functor = sys.argv[1]
-    t.args = []
-    for arg in sys.argv[2:]:
-        a = Atom()
-        try:
-            a.intData = [int(arg)]
-        except:
-            try:
-                a.floatData = [float(arg)]
-            except:
-                a.stringData = [arg]
-        t.args.append(a)
-    memory_srv_add = rospy.ServiceProxy('/memory/add', AddTerm)
-    resp = memory_srv_add(AddTermRequest(source='cmdline', term=t))
-    if resp.succeeded:
-        print "Succeeded."
-    else:
-        print "Failed."
-
+    c = MemoryClient('cmdline')
+    t = term_parse(sys.argv[1:])
+    meta = c.add(t)
+    print "Added (id=%d)." % meta.term_id

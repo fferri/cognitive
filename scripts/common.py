@@ -6,12 +6,16 @@ roslib.load_manifest('memory')
 
 import sys
 import thread
+import re
 
 import rospy
 
 from std_msgs.msg import *
 from memory.msg import *
 from memory.srv import *
+
+def AtomNull():
+    return Atom(intData=[], floatData=[], stringData=[])
 
 def AtomInt(i):
     return Atom(intData=[i], floatData=[], stringData=[])
@@ -38,12 +42,17 @@ def atom_check(a):
     if len(a.stringData) not in [0,1]:
         raise TypeError("atom_check: length of a.stringData is %s (value: %s)" % (len(a.stringData), a.stringData))
     t = len(a.intData) + len(a.floatData) + len(a.stringData)
-    if t != 1:
-        raise TypeError("atom_check: only one of intData floatData stringData must have one element (total: %d)" % t)
+    if t > 1:
+        raise TypeError("atom_check: at most one of intData floatData stringData must have one element (total: %d)" % t)
+
+def atom_is_null(a):
+    return len(a.intData) == 0 and len(a.floatData) == 0 and len(a.stringData) == 0
 
 def atom_equals(a1,a2):
     atom_check(a1)
     atom_check(a2)
+    if atom_is_null(a1) or atom_is_null(a2):
+        return True
     if len(a1.intData) != len(a2.intData) or len(a1.floatData) != len(a2.floatData) or len(a1.stringData) != len(a2.stringData):
         return False
     for (i,n) in enumerate(a1.intData):
@@ -53,6 +62,24 @@ def atom_equals(a1,a2):
     for (i,s) in enumerate(a1.stringData):
         if a2.stringData[i] != s: return False
     return True
+
+def atom_parse(anything):
+    if type(anything) == int:
+        return AtomInt(anything)
+    elif type(anything) == float:
+        return AtomFloat(anything)
+    elif type(anything) == str:
+        if anything == '_':
+            return AtomNull()
+        try:
+            return AtomInt(int(anything))
+        except:
+            try:
+                return AtomFloat(float(anything))
+            except:
+                return AtomString(anything)
+    else:
+        raise Exception('cannot make an atom from a %s' % type(anything))
 
 def atom_to_string(a):
     atom_check(a)
@@ -67,6 +94,13 @@ def atom_to_string(a):
 def TermX(f, *a):
     return Term(functor=f, args=a)
 
+def term_parse(str_list):
+    functor = str_list[0]
+    args = []
+    for arg in str_list[1:]:
+        args.append(atom_parse(arg))
+    return Term(functor=functor, args=args)
+
 def term_to_string(t):
     if type(t) != Term:
         print "term_to_string: WTF? (%s, type=%s)" % (t, type(t))
@@ -77,9 +111,36 @@ def term_to_string(t):
 
 def term_equals(t1,t2):
     if t1.functor != t2.functor: return False
-    if len(t1.args) != (t2.args): return False
-    for (i,a) in t1.args:
-        if not atom_equals(a,t2.args[i]):
+    if len(t1.args) != len(t2.args): return False
+    for i in range(0,len(t1.args)):
+        if not atom_equals(t1.args[i],t2.args[i]):
             return False
     return True
+
+def term_is_ground(t):
+    if t.functor == '':
+        return False
+    for arg in t.args:
+        if atom_is_null(arg):
+            return False
+    return True
+
+def print_terms_table(entries):
+    colw = [8, -50, -12]
+    fmt = '| ' + ' | '.join("%%%ds" % w for w in colw) + ' |'
+    hline = '+' + '+'.join('-' * (abs(w) + 2) for w in colw) + '+'
+    print hline
+    print fmt % ('id', 'term', 'source')
+    print hline
+    for entry in entries:
+        if type(entry) == TermMetadata:
+            term = entry.term
+            term_id = str(entry.term_id)
+            src = entry.src
+        elif type(entry) == Term:
+            term = entry
+            term_id = '?'
+            src = 'N/A'
+        print fmt % (term_id, term_to_string(term), src)    
+    print hline
 
