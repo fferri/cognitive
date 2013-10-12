@@ -1,13 +1,9 @@
 #!/usr/bin/env python
 
-import roslib
-
-roslib.load_manifest('memory')
-
+import roslib; roslib.load_manifest('memory')
 import sys
 import thread
 import re
-
 import rospy
 
 from std_msgs.msg import *

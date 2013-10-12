@@ -1,20 +1,13 @@
 #!/usr/bin/env python
 
-import roslib
-
-roslib.load_manifest('memory')
-
+import roslib; roslib.load_manifest('memory')
 import sys
 import thread
-from copy import copy
-
 import rospy
 
-from common import *
+from ._common import *
 
-from std_msgs.msg import *
-from memory.msg import *
-from memory.srv import *
+from copy import copy
 
 class MemoryStore:
     def __init__(self):
@@ -79,7 +72,4 @@ class MemoryStore:
 
     def get_all(self):
         return self.mem.values()
-
-if __name__ == "__main__":
-    print "?"
 

@@ -1,19 +1,11 @@
 #!/usr/bin/env python
 
-import roslib
-
-roslib.load_manifest('memory')
-
+import roslib; roslib.load_manifest('memory')
 import sys
 import thread
-
 import rospy
 
-from common import *
-
-from std_msgs.msg import *
-from memory.msg import *
-from memory.srv import *
+from ._common import *
 
 class MemoryClient:
     def __init__(self, src, ns='/memory'):
@@ -83,7 +75,4 @@ class MemoryClient:
         rospy.wait_for_service(self.ns + '/dump')
         req = DumpRequest()
         return self.srv_dump(req).metas
-
-if __name__ == "__main__":
-    print "?"
 

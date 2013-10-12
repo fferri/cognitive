@@ -1,20 +1,11 @@
 #!/usr/bin/env python
 
-import roslib
-
-roslib.load_manifest('memory')
-
+import roslib; roslib.load_manifest('memory')
 import sys
 import thread
-
 import rospy
 
-from common import *
-
-from std_msgs.msg import *
-from memory.msg import *
-from memory.srv import *
-from client import MemoryClient
+from memory.lib import *
 
 def show_log():
     rospy.init_node('memory_log')
