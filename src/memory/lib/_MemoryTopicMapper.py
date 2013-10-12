@@ -9,13 +9,16 @@ from ._MemoryClient import *
 from ._MemoryStore import *
 
 class MemoryTopicMapper:
-    def __init__(self, topic_name, topic_type, term_name, term_args, ns='/memory'):
+    def __init__(self, topic_name, topic_class, timeout_ms, term_name, term_args, ns='/memory'):
         self.client = MemoryClient('mapper', ns)
         self.ns = ns
         self.last_pub_time = 0
+        self.term_id = 0
+        self.timeout = timeout_ms * 0.001
         self.term_name = term_name
         self.term_args = term_args
-        rospy.Subscriber(topic_name, topic_type, self.callback)
+        self.remove_old_terms()
+        rospy.Subscriber(topic_name, topic_class, self.callback)
 
     def remove_old_terms(self):
         t = Term()
@@ -37,7 +40,15 @@ class MemoryTopicMapper:
 
     def callback(self, msg):
         self.last_pub_time = time.time()
-        self.remove_old_terms()
         t = self.make_term(msg)
-        self.client.add(t)
+        if self.term_id > 0:
+            self.client.change(self.term_id, t)
+        else:
+            meta = self.client.add(t)
+            self.term_id = meta.term_id
+
+    def spin(self):
+        age = time.time() - self.last_pub_time
+        if age > self.timeout:
+            self.remove_old_terms()
 
