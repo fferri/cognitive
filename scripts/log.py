@@ -9,7 +9,7 @@ from memory.lib import *
 
 def show_log():
     rospy.init_node('memory_log')
-    c = MemoryClient('cmdline')
+    c = MemoryClient('cmdline', ns=rospy.get_param('~memory_namespace', '/memory'))
 
     log_size = c.log_size()
 

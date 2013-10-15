@@ -9,7 +9,7 @@ from memory.lib import *
 
 def dump():
     print "memory contents:"
-    c = MemoryClient('cmdline')
+    c = MemoryClient('cmdline', ns=rospy.get_param('~memory_namespace', '/memory'))
     metas = c.get_all()
     print_terms_table(metas)
 

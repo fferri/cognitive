@@ -36,7 +36,7 @@ def callback_dump(req):
 
 def memory_server():
     rospy.init_node('memory_server')
-    ns = '/memory'
+    ns = rospy.get_param('~memory_namespace', '/memory')
     pubSeq    = rospy.Publisher(ns + '/seq', UInt32)
     srvAdd    = rospy.Service(ns + '/add', ChangeTerm, callback_add)
     srvRemove = rospy.Service(ns + '/remove', ChangeTerm, callback_remove)
@@ -44,9 +44,6 @@ def memory_server():
     srvPoll   = rospy.Service(ns + '/poll', Dump, callback_poll)
     srvGet    = rospy.Service(ns + '/get', Get, callback_get)
     srvDump   = rospy.Service(ns + '/dump', Dump, callback_dump)
-
-    # add something
-    callback_add(ChangeTermRequest(src='self', meta=TermMetadata(term=TermX('foo', AtomInt(1)))))
 
     r = rospy.Rate(10) # 10hz
     while not rospy.is_shutdown():

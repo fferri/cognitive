@@ -1,3 +1,5 @@
 <launch>
-  <node name="memory_server" pkg="memory" type="server.py" />
+  <node name="memory_server" pkg="memory" type="server.py">
+    <!--param name="memory_namespace" type="string" value="/mem1"/-->
+  </node>
 </launch>

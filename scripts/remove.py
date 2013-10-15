@@ -8,7 +8,7 @@ import rospy
 from memory.lib import *
 
 if __name__ == "__main__":
-    c = MemoryClient('cmdline')
+    c = MemoryClient('cmdline', ns=rospy.get_param('~memory_namespace', '/memory'))
     try:
         term_id = int(sys.argv[1])
         metas = [c.remove_id(term_id)]
