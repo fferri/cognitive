@@ -4,31 +4,58 @@ import roslib; roslib.load_manifest('memory')
 import sys
 import thread
 import rospy
+import time
 
 from memory.lib import *
 
-if __name__ == "__main__":
-    global ml
-    rospy.init_node('memory_listener')
-    class MyListener(MemoryListener):
-        def __init__(self, ns='/memory'):
-            MemoryListener.__init__(self, ns)
+max_print_interval = 0.25#s
+last_print = 0
+want_print = False
+print_changes = True
+print_memory = True
 
-        def callback_add(self, meta, src):
+def print_mem(dont_set_flag=False):
+    if not print_memory:
+        return
+    global last_print, want_print
+    if not dont_set_flag:
+        want_print = True
+    t = time.time()
+    if (t - last_print) > max_print_interval:
+        if want_print:
+            print_terms_table(ml.store.mem.values())
+        last_print = t
+        want_print = False
+
+class MyListener(MemoryListener):
+    def __init__(self, ns):
+        MemoryListener.__init__(self, ns)
+
+    def callback_add(self, meta, src):
+        if print_changes:
             print "%s added term %s (id=%d)" % (src, term_to_string(meta.term), meta.term_id)
-            print_terms_table(ml.store.mem.values())
+        print_mem()
 
-        def callback_remove(self, meta, src):
+    def callback_remove(self, meta, src):
+        if print_changes:
             print "%s removed term %s (id=%d)" % (src, term_to_string(meta.term), meta.term_id)
-            print_terms_table(ml.store.mem.values())
+        print_mem()
 
-        def callback_change(self, old_meta, meta, src):
+    def callback_change(self, old_meta, meta, src):
+        if print_changes:
             print "%s changed term %s to %s (id=%d)" % (src, term_to_string(old_meta.term), term_to_string(meta.term), meta.term_id)
-            print_terms_table(ml.store.mem.values())
+        print_mem()
 
-    ml = MyListener()
-    print_terms_table(ml.store.mem.values())
+if __name__ == "__main__":
+    rospy.init_node('memory_listener')
+    ns = rospy.get_param('~memory_namespace', '/memory')
+    print_changes = bool(rospy.get_param('~changes', 1))
+    print_memory = bool(rospy.get_param('~memory', 1))
+    ml = MyListener(ns)
+    if print_memory:
+        print_terms_table(ml.store.mem.values())
     r = rospy.Rate(10) # 10hz
     while not rospy.is_shutdown():
+        print_mem(True)
         r.sleep()
 
