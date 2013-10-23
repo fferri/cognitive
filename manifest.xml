@@ -1,0 +1,12 @@
+<package>
+  <description brief="indigolog">
+     Indigolog (a high-level programming language for robots) integration for ROS
+  </description>
+  <author email="federico.ferri.it@gmail.com">Federico Ferri</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/indigolog</url>
+  <depend package="rospy"/>
+</package>
+
+
