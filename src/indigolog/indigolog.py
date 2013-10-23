@@ -64,10 +64,12 @@ class Indigolog:
             head=(x.functor(),x.arity())
             args=x.arguments()
             print('    yield callback: compound: functor=%s/%d args=%s' % (head[0], head[1], args))
-        if type(x) == pyclp.Atom:
+        elif type(x) == pyclp.Atom:
             print('    yield callback: atom: %s' % str(x))
+        elif type(x) == pyclp.PList:
+            print('    yield callback: list: %s' % str(x))
         else:
-            print('    yield callback: unhandled type %s' % type(x))
+            print('yield callback: unhandled type %s' % type(x))
         return pyclp.Atom('1')
 
 if __name__ == "__main__":
