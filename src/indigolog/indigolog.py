@@ -60,16 +60,22 @@ class Indigolog:
             Exception('Failed to compile %s' % filename))
 
     def yield_callback(self, x):
+        if type(x) == pyclp.Atom:
+            return self.yield_callback_compound(x)
         if type(x) == pyclp.Compound:
-            head=(x.functor(),x.arity())
-            args=x.arguments()
-            print('    yield callback: compound: functor=%s/%d args=%s' % (head[0], head[1], args))
-        elif type(x) == pyclp.Atom:
-            print('    yield callback: atom: %s' % str(x))
-        elif type(x) == pyclp.PList:
-            print('    yield callback: list: %s' % str(x))
-        else:
-            print('yield callback: unhandled type %s' % type(x))
+            return self.yield_callback_compound(x)
+        if type(x) == pyclp.PList:
+            return self.yield_callback_compound(x)
+        print('yield callback: unhandled type %s' % type(x))
+        return pyclp.Atom('1')
+
+    def yield_callback_atom(self, atom):
+        return pyclp.Atom('1')
+
+    def yield_callback_compound(self, compound):
+        return pyclp.Atom('1')
+
+    def yield_callback_list(self, atom):
         return pyclp.Atom('1')
 
 if __name__ == "__main__":
