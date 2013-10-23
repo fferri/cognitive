@@ -61,11 +61,11 @@ class Indigolog:
 
     def yield_callback(self, x):
         if type(x) == pyclp.Atom:
-            return self.yield_callback_compound(x)
+            return self.yield_callback_atom(x)
         if type(x) == pyclp.Compound:
             return self.yield_callback_compound(x)
         if type(x) == pyclp.PList:
-            return self.yield_callback_compound(x)
+            return self.yield_callback_list(x)
         print('yield callback: unhandled type %s' % type(x))
         return pyclp.Atom('1')
 
