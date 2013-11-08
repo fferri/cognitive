@@ -1,32 +1,23 @@
 #!/usr/bin/env python
 
-import roslib; roslib.load_manifest('indigolog')
+import roslib; roslib.load_manifest('eclipse_prolog')
 import roslib.packages
 import sys
 import thread
 import rospy
 import pyclp
 
-from memory.lib import *
-
-class Indigolog:
-    def __init__(self, indigologdir, mainfile, mainproc):
+class EclipseProlog:
+    def __init__(self):
         pyclp.init()
         self.ecl_stream_stdin = pyclp.Stream('input')
         self.ecl_stream_stdout = pyclp.Stream('output')
         self.ecl_stream_stderr = pyclp.Stream('error')
 
-        interp_pl = indigologdir + '/Interpreters/indigolog-vanilla_ecl.pl'
-        self._compile(interp_pl)
-
-        self._compile(mainfile)
-        self._post_goal(pyclp.Atom(mainproc),
-            Exception('Program terminated with error'))
-        #print('Program terminated successfully')
-
+    def __del__(self):
         pyclp.cleanup()
 
-    def _resume(self):
+    def resume(self):
         in_term=None
         while True:
             result,arg=pyclp.resume(in_term)
@@ -38,7 +29,7 @@ class Indigolog:
                 if data:
                     sys.stdout.write(data)
             elif result == pyclp.WAITIO:
-                print('eclipse: WAITIO. WTF?!')
+                print('eclipse: WAITIO: not implemented')
             elif result == pyclp.YIELD:
                 in_term=self.yield_callback(arg)
             elif result == pyclp.THROW:
@@ -47,16 +38,16 @@ class Indigolog:
             else:
                 raise Exception('eclipse: unknown result: %d' % result)
 
-    def _post_goal(self, term, exc=None):
+    def post_goal(self, term, exc=None):
         term.post_goal()
-        result=self._resume()
+        result=self.resume()
         if exc and result != pyclp.SUCCEED:
             raise exc
         else:
             return result
 
-    def _compile(self, filename):
-        self._post_goal(pyclp.Compound('compile', pyclp.Atom(filename)),
+    def compile(self, filename):
+        self.post_goal(pyclp.Compound('compile', pyclp.Atom(filename)),
             Exception('Failed to compile %s' % filename))
 
     def yield_callback(self, x):
@@ -75,13 +66,6 @@ class Indigolog:
     def yield_callback_compound(self, compound):
         return pyclp.Atom('1')
 
-    def yield_callback_list(self, atom):
+    def yield_callback_list(self, plist):
         return pyclp.Atom('1')
-
-if __name__ == "__main__":
-    rospy.init_node('indigolog')
-    indigologdir = rospy.get_param('~indigologdir', '/usr/local/indigolog')
-    mainfile = rospy.get_param('~mainfile', roslib.packages.get_pkg_dir('indigolog') + '/src/main.pl')
-    mainproc = rospy.get_param('~mainproc', 'main')
-    indigolog = Indigolog(indigologdir, mainfile, mainproc)
 
