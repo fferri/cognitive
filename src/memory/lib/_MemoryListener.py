@@ -10,7 +10,10 @@ from ._MemoryClient import *
 from ._MemoryStore import *
 
 class MemoryListener:
-    def __init__(self, ns='/memory'):
+    def __init__(self, ns='/memory', callback_add=None, callback_remove=None, callback_change=None):
+        self._cb_add = callback_add
+        self._cb_remove = callback_remove
+        self._cb_change = callback_change
         self.client = MemoryClient('listener', ns)
         self.store = MemoryStore()
         self.ns = ns
@@ -50,11 +53,14 @@ class MemoryListener:
                 print("call to %s/get failed with exception: %s" % (self.ns, e))
 
     def callback_add(self, meta, src):
-        pass
+        if self._cb_add:
+            self._cb_add(meta, src)
 
     def callback_remove(self, meta, src):
-        pass
+        if self._cb_remove:
+            self._cb_remove(meta, src)
 
     def callback_change(self, meta, src):
-        pass
+        if self._cb_change:
+            self._cb_change(meta, src)
 
