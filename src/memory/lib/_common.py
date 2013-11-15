@@ -44,6 +44,30 @@ def atom_check(a):
 def atom_is_null(a):
     return len(a.intData) == 0 and len(a.floatData) == 0 and len(a.stringData) == 0
 
+def atom_is_int(a):
+    return len(a.intData) > 0
+
+def atom_is_float(a):
+    return len(a.floatData) > 0
+
+def atom_is_string(a):
+    return len(a.stringData) > 0
+
+def atom_get_int(a):
+    return a.intData[0]
+
+def atom_get_float(a):
+    return a.floatData[0]
+
+def atom_get_string(a):
+    return a.stringData[0]
+
+def atom_get(a):
+    if atom_is_int(a): return atom_get_int(a)
+    if atom_is_float(a): return atom_get_float(a)
+    if atom_is_string(a): return atom_get_string(a)
+    return None
+
 def atom_equals(a1,a2):
     atom_check(a1)
     atom_check(a2)
@@ -153,7 +177,8 @@ def get_terminal_size():
 def print_terms_table(entries):
     (width, height) = get_terminal_size()    
     #colw = [8, -50, -12]
-    colw = [8, -(width - 10 - 12 - 8), -12]
+    src_w = int(width/8)
+    colw = [8, -(width - 10 - src_w - 8), -src_w]
     fmt = '| ' + ' | '.join("%%%ds" % w for w in colw) + ' |'
     hline = '+' + '+'.join('-' * (abs(w) + 2) for w in colw) + '+'
     print hline
