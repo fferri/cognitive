@@ -26,7 +26,9 @@ def mapper():
         print('Message %s not found. (are messages built?)' % topic_type)
         return
 
-    mm = MemoryTopicMapper(topic_name, topic_class, term_functor, term_args_expr, timeout=timeout, ns=namespace)
+    mm = MemoryTopicMapper(topic_name, topic_class, term_functor, term_args_expr, timeout=timeout, ns=namespace, src=rospy.get_name())
+
+    rospy.on_shutdown(mm.on_shutdown)
 
     r = rospy.Rate(10) # 10hz
     while not rospy.is_shutdown():
