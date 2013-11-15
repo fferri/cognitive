@@ -72,66 +72,17 @@
     <param name="term/args/2" type="string" value="m.twist.angular.z"/>
   </node>
 
-  <node name="mapper_joint_pos_left_track" pkg="memory" type="mapper.py">
+  <node name="mapper_joint_pos" pkg="memory" type="mapper.py">
     <param name="topic_name" type="string" value="/joint_states"/>
     <param name="topic_type" type="string" value="sensor_msgs/JointState"/>
     <param name="timeout" type="int" value="4000"/>
     <param name="term/functor" type="string" value="joint_pos"/>
-    <param name="term/args/0" type="string" value="'left_track'"/>
-    <param name="term/args/1" type="string" value="m.position[m.name.index('left_track_j')]"/>
-  </node>
-
-  <node name="mapper_joint_pos_right_track" pkg="memory" type="mapper.py">
-    <param name="topic_name" type="string" value="/joint_states"/>
-    <param name="topic_type" type="string" value="sensor_msgs/JointState"/>
-    <param name="timeout" type="int" value="4000"/>
-    <param name="term/functor" type="string" value="joint_pos"/>
-    <param name="term/args/0" type="string" value="'right_track'"/>
+    <param name="term/args/0" type="string" value="m.position[m.name.index('left_track_j')]"/>
     <param name="term/args/1" type="string" value="m.position[m.name.index('right_track_j')]"/>
-  </node>
-
-  <node name="mapper_joint_pos_front_left_flipper" pkg="memory" type="mapper.py">
-    <param name="topic_name" type="string" value="/joint_states"/>
-    <param name="topic_type" type="string" value="sensor_msgs/JointState"/>
-    <param name="timeout" type="int" value="4000"/>
-    <param name="term/functor" type="string" value="joint_pos"/>
-    <param name="term/args/0" type="string" value="'front_left_flipper'"/>
-    <param name="term/args/1" type="string" value="m.position[m.name.index('front_left_flipper_j')]"/>
-  </node>
-
-  <node name="mapper_joint_pos_front_right_flipper" pkg="memory" type="mapper.py">
-    <param name="topic_name" type="string" value="/joint_states"/>
-    <param name="topic_type" type="string" value="sensor_msgs/JointState"/>
-    <param name="timeout" type="int" value="4000"/>
-    <param name="term/functor" type="string" value="joint_pos"/>
-    <param name="term/args/0" type="string" value="'front_right_flipper'"/>
-    <param name="term/args/1" type="string" value="m.position[m.name.index('front_right_flipper_j')]"/>
-  </node>
-
-  <node name="mapper_joint_pos_rear_left_flipper" pkg="memory" type="mapper.py">
-    <param name="topic_name" type="string" value="/joint_states"/>
-    <param name="topic_type" type="string" value="sensor_msgs/JointState"/>
-    <param name="timeout" type="int" value="4000"/>
-    <param name="term/functor" type="string" value="joint_pos"/>
-    <param name="term/args/0" type="string" value="'rear_left_flipper'"/>
-    <param name="term/args/1" type="string" value="m.position[m.name.index('rear_left_flipper_j')]"/>
-  </node>
-
-  <node name="mapper_joint_pos_rear_right_flipper" pkg="memory" type="mapper.py">
-    <param name="topic_name" type="string" value="/joint_states"/>
-    <param name="topic_type" type="string" value="sensor_msgs/JointState"/>
-    <param name="timeout" type="int" value="4000"/>
-    <param name="term/functor" type="string" value="joint_pos"/>
-    <param name="term/args/0" type="string" value="'rear_right_flipper'"/>
-    <param name="term/args/1" type="string" value="m.position[m.name.index('rear_right_flipper_j')]"/>
-  </node>
-
-  <node name="mapper_joint_pos_laser" pkg="memory" type="mapper.py">
-    <param name="topic_name" type="string" value="/joint_states"/>
-    <param name="topic_type" type="string" value="sensor_msgs/JointState"/>
-    <param name="timeout" type="int" value="4000"/>
-    <param name="term/functor" type="string" value="joint_pos"/>
-    <param name="term/args/0" type="string" value="'laser'"/>
-    <param name="term/args/1" type="string" value="m.position[m.name.index('laser_j')]"/>
+    <param name="term/args/2" type="string" value="m.position[m.name.index('front_left_flipper_j')]"/>
+    <param name="term/args/3" type="string" value="m.position[m.name.index('front_right_flipper_j')]"/>
+    <param name="term/args/4" type="string" value="m.position[m.name.index('rear_left_flipper_j')]"/>
+    <param name="term/args/5" type="string" value="m.position[m.name.index('rear_right_flipper_j')]"/>
+    <param name="term/args/6" type="string" value="m.position[m.name.index('laser_j')]"/>
   </node>
 </launch>

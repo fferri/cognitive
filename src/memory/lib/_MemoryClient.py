@@ -8,7 +8,7 @@ import rospy
 from ._common import *
 
 class MemoryClient:
-    def __init__(self, src, ns='/memory'):
+    def __init__(self, src=rospy.get_name(), ns='/memory'):
         self.src = src
         self.ns = ns
         self.srv_add = None

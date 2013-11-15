@@ -60,7 +60,8 @@ class MemoryListener:
         if self._cb_remove:
             self._cb_remove(meta, src)
 
-    def callback_change(self, meta, src):
+    def callback_change(self, old_meta, meta, src):
         if self._cb_change:
+            #self._cb_change(old_meta, meta, src)
             self._cb_change(meta, src)
 
