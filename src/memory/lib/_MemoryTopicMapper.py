@@ -9,8 +9,8 @@ from ._MemoryClient import *
 from ._MemoryStore import *
 
 class MemoryTopicMapper:
-    def __init__(self, topic_name, topic_class, term_name, term_args, timeout=0, ns='/memory'):
-        self.client = MemoryClient('mapper', ns)
+    def __init__(self, topic_name, topic_class, term_name, term_args, timeout=0, src=rospy.get_name(), ns='/memory'):
+        self.client = MemoryClient(src=src, ns=ns)
         self.ns = ns
         self.last_pub_time = 0
         self.term_id = 0
@@ -65,4 +65,7 @@ class MemoryTopicMapper:
             age = time.time() - self.last_pub_time
             if age > self.timeout:
                 self.on_timeout()
+
+    def on_shutdown(self):
+        self.on_timeout()
 
