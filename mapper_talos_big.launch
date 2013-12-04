@@ -1,5 +1,5 @@
 <launch>
-  <node name="mapper_battery" pkg="memory" type="mapper.py">
+  <node name="mapper_battery" pkg="memory" type="mapper">
     <param name="topic_name" type="string" value="/robot_status"/>
     <param name="topic_type" type="string" value="nifti_robot_driver_msgs/RobotStatusStamped"/>
     <param name="timeout" type="int" value="4000"/>
@@ -8,7 +8,7 @@
     <param name="term/args/1" type="string" value="m.battery_level"/>
   </node>
 
-  <node name="mapper_emergency_stop" pkg="memory" type="mapper.py">
+  <node name="mapper_emergency_stop" pkg="memory" type="mapper">
     <param name="topic_name" type="string" value="/robot_status"/>
     <param name="topic_type" type="string" value="nifti_robot_driver_msgs/RobotStatusStamped"/>
     <param name="timeout" type="int" value="4000"/>
@@ -16,7 +16,7 @@
     <param name="term/args/0" type="string" value="1 if m.emergency_stop_on == True else 0"/>
   </node>
 
-  <node name="mapper_temperature" pkg="memory" type="mapper.py">
+  <node name="mapper_temperature" pkg="memory" type="mapper">
     <param name="topic_name" type="string" value="/temperature"/>
     <param name="topic_type" type="string" value="std_msgs/Float32"/>
     <param name="timeout" type="int" value="4000"/>
@@ -24,7 +24,7 @@
     <param name="term/args/0" type="string" value="m.data"/>
   </node>
 
-  <node name="mapper_brake" pkg="memory" type="mapper.py">
+  <node name="mapper_brake" pkg="memory" type="mapper">
     <param name="topic_name" type="string" value="/robot_status"/>
     <param name="topic_type" type="string" value="nifti_robot_driver_msgs/RobotStatusStamped"/>
     <param name="timeout" type="int" value="4000"/>
@@ -32,7 +32,7 @@
     <param name="term/args/0" type="string" value="1 if m.brake_on == True else 0"/>
   </node>
 
-  <node name="mapper_tracks" pkg="memory" type="mapper.py">
+  <node name="mapper_tracks" pkg="memory" type="mapper">
     <param name="topic_name" type="string" value="/robot_status"/>
     <param name="topic_type" type="string" value="nifti_robot_driver_msgs/RobotStatusStamped"/>
     <param name="timeout" type="int" value="4000"/>
@@ -41,7 +41,7 @@
     <param name="term/args/1" type="string" value="m.controllers_status.track_left"/>
   </node>
 
-  <node name="mapper_flippers" pkg="memory" type="mapper.py">
+  <node name="mapper_flippers" pkg="memory" type="mapper">
     <param name="topic_name" type="string" value="/robot_status"/>
     <param name="topic_type" type="string" value="nifti_robot_driver_msgs/RobotStatusStamped"/>
     <param name="timeout" type="int" value="4000"/>
@@ -52,7 +52,7 @@
     <param name="term/args/3" type="string" value="m.controllers_status.flipper_rear_right"/>
   </node>
 
-  <node name="mapper_accelerometer" pkg="memory" type="mapper.py">
+  <node name="mapper_accelerometer" pkg="memory" type="mapper">
     <param name="topic_name" type="string" value="/velocity"/>
     <param name="topic_type" type="string" value="geometry_msgs/TwistStamped"/>
     <param name="timeout" type="int" value="4000"/>
@@ -62,7 +62,7 @@
     <param name="term/args/2" type="string" value="m.twist.linear.z"/>
   </node>
 
-  <node name="mapper_gyroscope" pkg="memory" type="mapper.py">
+  <node name="mapper_gyroscope" pkg="memory" type="mapper">
     <param name="topic_name" type="string" value="/velocity"/>
     <param name="topic_type" type="string" value="geometry_msgs/TwistStamped"/>
     <param name="timeout" type="int" value="4000"/>
@@ -72,7 +72,7 @@
     <param name="term/args/2" type="string" value="m.twist.angular.z"/>
   </node>
 
-  <node name="mapper_joint_pos" pkg="memory" type="mapper.py">
+  <node name="mapper_joint_pos" pkg="memory" type="mapper">
     <param name="topic_name" type="string" value="/joint_states"/>
     <param name="topic_type" type="string" value="sensor_msgs/JointState"/>
     <param name="timeout" type="int" value="4000"/>
