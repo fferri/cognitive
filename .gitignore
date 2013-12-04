@@ -51,4 +51,4 @@ nosetests.xml
 ehthumbs.db
 Thumbs.db
 
-indigolog/indigolog
+indigolog/src/indigolog
