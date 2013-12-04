@@ -1,5 +1,5 @@
 <package>
-  <description brief="indigolog">
+  <description brief="eclipse-prolog for ros">
      Eclipse-prolog integration for ROS
   </description>
   <author email="federico.ferri.it@gmail.com">Federico Ferri</author>
