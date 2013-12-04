@@ -8,6 +8,7 @@ import rospy
 from memory.lib import *
 
 if __name__ == "__main__":
+    rospy.init_node('memory_clear')
     c = MemoryClient('cmdline', ns=rospy.get_param('~memory_namespace', '/memory'))
     metas = c.get_all()
     numRemoved = 0

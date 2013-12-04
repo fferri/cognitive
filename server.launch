@@ -1,5 +1,15 @@
 <launch>
+  <arg name="namespace" default="/memory" />
+  <arg name="changes" default="0" />
+  <arg name="memory" default="1" />
+
   <node name="memory_server" pkg="memory" type="server.py">
-    <!--param name="memory_namespace" type="string" value="/mem1"/-->
+    <param name="memory_namespace" type="string" value="$(arg namespace)" />
+  </node>
+
+  <node name="memory_listener" pkg="memory" type="listener.py" output="screen">
+    <param name="memory_namespace" type="string" value="$(arg namespace)" />
+    <param name="changes" type="int" value="$(arg changes)" />
+    <param name="memory" type="int" value="$(arg memory)" />
   </node>
 </launch>

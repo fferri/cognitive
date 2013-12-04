@@ -8,7 +8,9 @@ import rospy
 from memory.lib import *
 
 if __name__ == "__main__":
+    rospy.init_node('memory_change')
     c = MemoryClient('cmdline', ns=rospy.get_param('~memory_namespace', '/memory'))
-    t = term_parse(sys.argv[2:])
-    meta = c.change(int(sys.argv[1]), t)
+    argv = rospy.myargv()
+    t = term_parse(argv[2:])
+    meta = c.change(int(argv[1]), t)
     print "Changed (id=%d)." % meta.term_id

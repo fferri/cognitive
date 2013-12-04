@@ -8,6 +8,7 @@ import rospy
 from memory.lib import *
 
 def dump():
+    rospy.init_node('memory_dump')
     print "memory contents:"
     c = MemoryClient('cmdline', ns=rospy.get_param('~memory_namespace', '/memory'))
     metas = c.get_all()
