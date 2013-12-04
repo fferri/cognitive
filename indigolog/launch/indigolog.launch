@@ -1,0 +1,3 @@
+<launch>
+  <node name="indigolog" pkg="indigolog" type="indigolog" output="screen" />
+</launch>
