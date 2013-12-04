@@ -1,0 +1,13 @@
+<package>
+  <description brief="memory">
+     cognitive memory for ROS
+  </description>
+  <author email="federico.ferri.it@gmail.com">Federico Ferri</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/memory</url>
+  <depend package="rospy"/>
+
+</package>
+
+
