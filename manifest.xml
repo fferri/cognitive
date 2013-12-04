@@ -1,0 +1,16 @@
+<package>
+  <description brief="indigolog integration in ros">
+     Writing high level controllers for ROS in Indigolog
+  </description>
+  <author email="federico.ferri.it@gmail.com">Federico Ferri</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/indigolog</url>
+  <depend package="rospy"/>
+  <depend package="memory"/>
+  <depend package="eclipse_prolog"/>
+  <depend package="actionlib"/>
+  <depend package="actionlib_msgs"/>
+  <depend package="move_base_msgs"/>
+</package>
+

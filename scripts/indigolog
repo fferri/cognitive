@@ -1,0 +1,140 @@
+#!/usr/bin/env python
+
+import roslib; roslib.load_manifest('indigolog')
+import roslib.packages
+import sys
+import threading
+import signal
+import rospy
+import tf
+from actionlib import SimpleActionClient, SimpleGoalState
+import pyclp
+from move_base_msgs.msg import *
+from eclipse_prolog import *
+from memory.lib import *
+
+class Indigolog(EclipseProlog):
+    def __init__(self):
+        EclipseProlog.__init__(self)
+
+        print('Compiling prolog code...')
+        self.compile(roslib.packages.get_pkg_dir('indigolog') + '/src/test.pl')
+
+        print('Initialize move_base action client...')
+        self.move_base = SimpleActionClient('move_base', MoveBaseAction)
+        self.move_base.wait_for_server()
+        self.move_base_goal=None
+        self.move_base_result=None
+
+        print('Start prolog control loop...')
+        ret=self.post_goal(pyclp.Compound('indigolog', pyclp.Atom('control')))
+
+        print('Terminated successfully' if ret else 'Terminated with error')
+
+    def yield_callback_atom(self, atom):
+        if str(atom) == 'check_exog_occurs':
+            return self.callback_check_exog_occurs()
+        else:
+            raise Exception('yield called with: %s' % atom)
+
+    def yield_callback_compound(self, compound):
+        head=(compound.functor(), compound.arity())
+        args=list(compound.arguments())
+        if head == ('execute', 1):
+            return self.callback_execute(args[0])
+        else:
+            raise Exception('yield called with: %s/%d [%s]' % (head[0], head[1], args))
+
+    def callback_execute(self, arg):
+        if type(arg) == pyclp.Compound and arg.functor() == 'move_base':
+            return self.callback_execute_move_base(list(arg.arguments()))
+        print('ERROR: called execute() for unmapped action term: %s' % arg)
+        return pyclp.Atom('0')
+
+    def callback_execute_move_base(self, args):
+        px=py=pz=ar=ap=ay=0
+        if len(args) == 1 and str(args[0]) == 'wait':
+            self.move_base.wait_for_result()
+            result=self.move_base.get_result()
+            self.move_base_goal=None
+            return pyclp.Atom('1')
+        elif len(args) == 1 and str(args[0]) == 'abort':
+            self.move_base.cancel_goal()
+            self.move_base_goal=None
+            return pyclp.Atom('1')
+        elif len(args) == 3: px,py,ay=args
+        elif len(args) == 6: px,py,pz,ar,ap,ay=args
+        else: raise Exception('bad args %s for yield(execute())' % args)
+        if self.move_base_goal:
+            raise Exception('ERROR: there is already a move_base goal running')
+        if self.move_base_result:
+            rospy.logwarn('Discarding previous move_base reuslt (%s)' % self.move_base_result)
+        self.move_base_goal = MoveBaseGoal()
+        self.move_base_goal.target_pose.header.stamp = rospy.Time.now()
+        self.move_base_goal.target_pose.header.frame_id = '/map'
+        self.move_base_goal.target_pose.pose.position.x = float(px)
+        self.move_base_goal.target_pose.pose.position.y = float(py)
+        self.move_base_goal.target_pose.pose.position.z = float(pz)
+        q = tf.transformations.quaternion_from_euler(float(ar), float(ap), float(ay))
+        self.move_base_goal.target_pose.pose.orientation.x = q[0]
+        self.move_base_goal.target_pose.pose.orientation.y = q[1]
+        self.move_base_goal.target_pose.pose.orientation.z = q[2]
+        self.move_base_goal.target_pose.pose.orientation.w = q[3]
+        self.move_base.send_goal(self.move_base_goal)
+
+    def callback_check_exog_occurs(self):
+        global memory_changed, memory_content
+
+        if memory_changed:
+            memory_changed=False
+            return pyclp.Compound('memory_update', pyclp.PList(list(pyclp.Compound(t.functor, *(atom_get(a) for a in t.args)) for t in memory_content)))
+
+        if self.move_base_goal and self.move_base.simple_state == SimpleGoalState.DONE:
+            self.move_base.wait_for_result()
+            self.move_base_goal=None
+            result=self.move_base.get_result()
+            return pyclp.Compound('move_base', pyclp.Atom('end'))
+
+        return pyclp.Atom('none')
+
+#    def move_base(self, x, y, angle):
+#        if not self.move_base_client:
+#            self.move_base_client = SimpleActionClient('move_base', MoveBaseAction)
+#        print('move_base: executing move_base(%f,%f,%f)' % (x,y,angle))
+#        goal = MoveBaseGoal()
+#        goal.target_pose.pose.position.x = x
+#        goal.target_pose.pose.position.y = y
+#        goal.target_pose.pose.orientation.w = angle
+#        goal.target_pose.header.frame_id = '/map'
+#        goal.target_pose.header.stamp = rospy.Time.now()
+#        print('move_base: Waiting for action server...')
+#        self.move_base_client.wait_for_server()
+#        print('move_base: Sending goal and waiting for result...')
+#        self.move_base_client.send_goal(goal)
+#        self.move_base_client.wait_for_result()
+#        print('move_base: Result is %s' % self.move_base_client.get_result())
+
+memory_listener=None
+memory_changed=False
+memory_content=[]
+
+def main():
+    global memory_listener, memory_changed
+    rospy.init_node('indigolog')
+    memory_listener = MemoryListener(callback_add=memcb, callback_remove=memcb, callback_change=memcb)
+    memcb(None, None)
+
+    Indigolog()
+
+    #r = rospy.Rate(10) # 10hz
+    #while not rospy.is_shutdown():
+    #    r.sleep()
+
+def memcb(meta, src):
+    global memory_content, memory_changed
+    memory_content = list(m.term for m in memory_listener.store.get_all())
+    memory_changed = True
+
+if __name__ == "__main__":
+    main()
+
