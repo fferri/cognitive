@@ -35,4 +35,18 @@ nosetests.xml
 .project
 .pydevproject
 
-src/indigolog
+.*.swp
+
+*/msg_gen
+*/srv_gen
+*/bin
+*/build
+*/src/*/msg
+*/src/*/srv
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
