@@ -118,23 +118,17 @@ memory_listener=None
 memory_changed=False
 memory_content=[]
 
-def main():
-    global memory_listener, memory_changed
-    rospy.init_node('indigolog')
-    memory_listener = MemoryListener(callback_add=memcb, callback_remove=memcb, callback_change=memcb)
-    memcb(None, None)
-
-    Indigolog()
-
-    #r = rospy.Rate(10) # 10hz
-    #while not rospy.is_shutdown():
-    #    r.sleep()
-
 def memcb(meta, src):
     global memory_content, memory_changed
     memory_content = list(m.term for m in memory_listener.store.get_all())
     memory_changed = True
 
 if __name__ == "__main__":
-    main()
+    rospy.init_node('indigolog')
+    print('Creating the memory listener...')
+    memory_listener = MemoryListener(callback_add=memcb, callback_remove=memcb, callback_change=memcb)
+    memcb(None, None)
+
+    print('Starting indigolog...')
+    Indigolog()
 

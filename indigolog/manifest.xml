@@ -9,6 +9,7 @@
   <depend package="rospy"/>
   <depend package="memory"/>
   <depend package="eclipse_prolog"/>
+  <depend package="tf"/>
   <depend package="actionlib"/>
   <depend package="actionlib_msgs"/>
   <depend package="move_base_msgs"/>
