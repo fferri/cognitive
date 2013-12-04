@@ -50,3 +50,5 @@ nosetests.xml
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+indigolog/indigolog
