@@ -1,6 +1,6 @@
 <package>
   <description brief="memory">
-     shared memory for ROS
+     cognitive memory for ROS
   </description>
   <author email="federico.ferri.it@gmail.com">Federico Ferri</author>
   <license>BSD</license>
