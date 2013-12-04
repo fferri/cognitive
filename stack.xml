@@ -1,0 +1,8 @@
+<stack>
+  <description brief="cognitive">Stack of cognitive robotics packages for ROS</description>
+  <author email="federico.ferri.it@gmail.com">Federico Ferri</author>
+  <license>BSD</license>  
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/cognitive</url>
+  <depend stack="ros" />
+</stack>
