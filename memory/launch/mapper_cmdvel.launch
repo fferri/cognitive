@@ -4,6 +4,7 @@
     <param name="topic_name" type="string" value="/cmd_vel"/>
     <param name="topic_type" type="string" value="geometry_msgs/Twist"/>
     <param name="timeout" type="int" value="4000"/>
+    <param name="term/id" type="string" value="cmd_vel"/>
     <param name="term/functor" type="string" value="cmd_vel"/>
     <param name="term/args/0" type="string" value="m.linear.x"/>
     <param name="term/args/1" type="string" value="m.linear.y"/>

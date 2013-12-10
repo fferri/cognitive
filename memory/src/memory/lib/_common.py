@@ -138,8 +138,8 @@ def term_equals(t1,t2):
     return True
 
 def term_is_ground(t):
-    if t.functor == '':
-        return False
+    #if t.functor == '':
+    #    return False
     for arg in t.args:
         if atom_is_null(arg):
             return False
@@ -176,9 +176,9 @@ def get_terminal_size():
 
 def print_terms_table(entries):
     (width, height) = get_terminal_size()    
-    #colw = [8, -50, -12]
-    src_w = int(width/8)
-    colw = [8, -(width - 10 - src_w - 8), -src_w]
+    id_w = max([8] + list(len(m.term_id) for m in entries))
+    src_w = max([8] + list(len(m.src) for m in entries))
+    colw = [id_w, -(width - 10 - src_w - id_w), -src_w]
     fmt = '| ' + ' | '.join("%%%ds" % w for w in colw) + ' |'
     hline = '+' + '+'.join('-' * (abs(w) + 2) for w in colw) + '+'
     print hline
@@ -187,7 +187,7 @@ def print_terms_table(entries):
     for entry in entries:
         if type(entry) == TermMetadata:
             term = entry.term
-            term_id = str(entry.term_id)
+            term_id = entry.term_id
             src = entry.src
         elif type(entry) == Term:
             term = entry

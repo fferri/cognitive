@@ -15,51 +15,45 @@ class MemoryStore:
         self.mem = {}
         self.log = []
 
-    def new_term_id(self):
-        ret = self.seq
-        self.seq += 1
-        return ret
+    def contains(self, term_id, src=''):
+        return term_id in self.mem
 
-    def add(self, term, src=''):
+    def keys():
+        return self.mem.keys()
+
+    def read(self, term_id, src=''):
+        if not self.contains(term_id):
+            raise Exception('Term id %s does not exist' % term_id)
+        return self.mem[term_id]
+
+    def write(self, term_id, term, src=''):
         if not term_is_ground(term):
             raise Exception('Cannot add unground term %s' % term_to_string(term))
+
         meta = TermMetadata()
-        meta.term_id = self.new_term_id()
+        if not term_id:
+            term_id = '_%d' % self.seq
+            self.seq += 1
+        meta.term_id = term_id
         meta.stamp = rospy.Time.now()
         meta.src = src
         meta.term = term
+
+        if self.contains(term_id):
+            self.log.append(Change(op_type=Change.OP_CHANGE, src=src, meta=meta))
+        else:
+            self.log.append(Change(op_type=Change.OP_ADD, src=src, meta=meta))
+
         self.mem[meta.term_id] = meta
-        self.log.append(Change(op_type=Change.OP_ADD, src=src, meta=meta))
         return meta
 
-    def remove_id(self, term_id, src=''):
-        if term_id not in self.mem:
-            raise Exception('Term id %d does not exist' % term_id)
+    def remove(self, term_id, src=''):
+        if not self.contains(term_id):
+            raise Exception('Term id %s does not exist' % term_id)
         meta = copy(self.mem[term_id])
         meta.stamp = rospy.Time.now()
         self.log.append(Change(op_type=Change.OP_DEL, src=src, meta=meta))
         self.mem.pop(term_id, None)
-        return meta
-
-    def remove(self, term, src=''):
-        ids_to_del = []
-        for meta in self.mem.values():
-            if term_equals(meta.term, term):
-                ids_to_del.append(meta.term_id)
-        ret = []
-        for term_id in ids_to_del:
-            ret.append(self.remove_id(term_id, src))
-        return ret
-
-    def change(self, term_id, new_term, src=''):
-        if term_id not in self.mem:
-            raise Exception('Term id %d does not exist' % term_id)
-        meta = copy(self.mem[term_id])
-        meta.stamp = rospy.Time.now()
-        meta.src = src
-        meta.term = new_term
-        self.mem[term_id] = meta
-        self.log.append(Change(op_type=Change.OP_CHANGE, src=src, meta=meta))
         return meta
 
     def log_size(self):

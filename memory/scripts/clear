@@ -13,8 +13,8 @@ if __name__ == "__main__":
     metas = c.get_all()
     numRemoved = 0
     for meta in metas:
-        print('Removing term #%d...' % meta.term_id)
-        c.remove_id(meta.term_id)
+        print('Removing term id=%s...' % meta.term_id)
+        c.remove(meta.term_id)
         numRemoved += 1
     print('Removed %d terms out of %d.' % (numRemoved, len(metas)))
 

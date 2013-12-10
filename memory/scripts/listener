@@ -33,17 +33,17 @@ class MyListener(MemoryListener):
 
     def callback_add(self, meta, src):
         if print_changes:
-            print "%s added term %s (id=%d)" % (src, term_to_string(meta.term), meta.term_id)
+            print "%s added term %s (id=%s)" % (src, term_to_string(meta.term), meta.term_id)
         print_mem()
 
     def callback_remove(self, meta, src):
         if print_changes:
-            print "%s removed term %s (id=%d)" % (src, term_to_string(meta.term), meta.term_id)
+            print "%s removed term %s (id=%s)" % (src, term_to_string(meta.term), meta.term_id)
         print_mem()
 
     def callback_change(self, old_meta, meta, src):
         if print_changes:
-            print "%s changed term %s to %s (id=%d)" % (src, term_to_string(old_meta.term), term_to_string(meta.term), meta.term_id)
+            print "%s changed term %s to %s (id=%s)" % (src, term_to_string(old_meta.term), term_to_string(meta.term), meta.term_id)
         print_mem()
 
 if __name__ == "__main__":

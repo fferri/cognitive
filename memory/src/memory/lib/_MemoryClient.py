@@ -11,48 +11,34 @@ class MemoryClient:
     def __init__(self, src=rospy.get_name(), ns='/memory'):
         self.src = src
         self.ns = ns
-        self.srv_add = None
+        self.srv_read = None
+        self.srv_write = None
         self.srv_remove = None
-        self.srv_change = None
         self.srv_poll = None
         self.srv_get = None
         self.srv_dump = None
 
-    def add(self, term):
-        if self.srv_add == None:
-            self.srv_add = rospy.ServiceProxy(self.ns + '/add', ChangeTerm)
-        rospy.wait_for_service(self.ns + '/add')
-        req = ChangeTermRequest(src=self.src, meta=TermMetadata(term=term))
-        resp = self.srv_add(req)
-        if len(resp.metas) > 1:
-            raise Exception('Add response is a WTF')
-        return resp.metas[0]
+    def read(self, term_id):
+        if self.srv_read == None:
+            self.srv_read = rospy.ServiceProxy(self.ns + '/read', ReadTerm)
+        rospy.wait_for_service(self.ns + '/read')
+        req = ReadTermRequest(src=self.src, term_id=term_id)
+        resp = self.srv_read(req)
+        return resp.meta
 
-    def remove_id(self, term_id):
+    def write(self, term_id, term):
+        if self.srv_write == None:
+            self.srv_write = rospy.ServiceProxy(self.ns + '/write', WriteTerm)
+        rospy.wait_for_service(self.ns + '/write')
+        req = WriteTermRequest(src=self.src, meta=TermMetadata(term_id=term_id, term=term))
+        resp = self.srv_write(req)
+
+    def remove(self, term_id):
         if self.srv_remove == None:
-            self.srv_remove = rospy.ServiceProxy(self.ns + '/remove', ChangeTerm)
+            self.srv_remove = rospy.ServiceProxy(self.ns + '/remove', RemoveTerm)
         rospy.wait_for_service(self.ns + '/remove')
-        req = ChangeTermRequest(src=self.src, meta=TermMetadata(term_id=term_id))
+        req = RemoveTermRequest(src=self.src, term_id=term_id)
         resp = self.srv_remove(req)
-        if len(resp.metas) > 1:
-            raise Exception('Add response is a WTF')
-        return resp.metas[0]
-
-    def remove(self, term):
-        if self.srv_remove == None:
-            self.srv_remove = rospy.ServiceProxy(self.ns + '/remove', ChangeTerm)
-        rospy.wait_for_service(self.ns + '/remove')
-        req = ChangeTermRequest(src=self.src, meta=TermMetadata(term=term))
-        resp = self.srv_remove(req)
-        return resp.metas
-
-    def change(self, term_id, term):
-        if self.srv_change == None:
-            self.srv_change = rospy.ServiceProxy(self.ns + '/change', ChangeTerm)
-        rospy.wait_for_service(self.ns + '/change')
-        req = ChangeTermRequest(src=self.src, meta=TermMetadata(term_id=term_id, term=term))
-        resp = self.srv_change(req)
-        return resp.metas[0]
 
     def log_size(self):
         if self.srv_poll == None:
