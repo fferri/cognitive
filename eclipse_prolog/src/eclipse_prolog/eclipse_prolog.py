@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 
 import roslib; roslib.load_manifest('eclipse_prolog')
+import rospy
+import genpy
 import roslib.message
 import roslib.packages
 import sys
@@ -17,6 +19,8 @@ class EclipseProlog:
         self.publishers = {}
         self.subscribers = {}
         self.topic_cache = {}
+        self.services = {}
+        self.action_goals = {}
 
     def __del__(self):
         pyclp.cleanup()
@@ -125,22 +129,63 @@ class EclipseProlog:
     def topic_callback(self, data, topic_name):
         self.topic_cache[topic_name] = data
 
+    def yield_callback_call_service_3(self, service_name, service_type, service_data):
+        service_name = str(service_name)
+        service_type = str(service_type)
+        if not service_name in self.services:
+            service_class = roslib.message.get_service_class(service_type)
+            self.services[service_name] = rospy.ServiceProxy(service_name, service_class)
+        resp = self.services[service_name](term2srv(service_data))
+        return srv2term(resp)
+
+
 # ROS topic <-> Prolog utilities:
 def msg2term(msg):
-    args = []
-    for slot in msg.__slots__:
-        slot_obj = eval('msg.' + slot)
-        if not type(slot_obj) in [float, int, str]:
-            slot_obj = msg2term(slot_obj)
-        args.append(pyclp.Compound(slot, slot_obj))
-    return pyclp.Compound(msg._type, pyclp.PList(args))
+    if type(msg) in [float, int, str]:
+        return msg
+    if type(msg) in [list, tuple]:
+        return pyclp.PList(list(msg2term(x) for x in msg))
+    if type(msg) == genpy.rostime.Time:
+        return pyclp.Compound('time', msg.to_sec())
+    return pyclp.Compound(msg._type, pyclp.PList(list(pyclp.Compound(slot, msg2term(getattr(msg, slot))) for slot in msg.__slots__)))
 
 def term2msg(term):
-    if type(term) in [float, int, str]:
-        return term
+    if type(term) == pyclp.PList:
+        return list(term2msg(x) for x in term)
+    if type(term) == pyclp.Atom:
+        try:
+            return int(term)
+        except:
+            try:
+                return float(term)
+            except:
+                return str(term)
+    if term.functor() == 'time':
+        return genpy.rostime.Time(float(term.arguments().next()))
     topic_class = roslib.message.get_message_class(term.functor())
     prolog_dict = term.arguments().next()
     kwargs = {}
     for kv in prolog_dict:
         kwargs[kv.functor()] = term2msg(kv.arguments().next())
     return topic_class(**kwargs)
+
+# ROS service <-> Prolog utilities:
+def srv2term(srv_resp):
+    args = []
+    for slot in srv_resp.__slots__:
+        slot_obj = getattr(srv_resp, slot)
+        if not type(slot_obj) in [float, int, str]:
+            slot_obj = msg2term(slot_obj)
+        args.append(pyclp.Compound(slot, slot_obj))
+    return pyclp.Compound(srv_resp._type, pyclp.PList(args))
+
+def term2srv(term):
+    if type(term) in [float, int, str]:
+        return term
+    srv_resp_class = roslib.message.get_service_class(term.functor())._request_class
+    prolog_dict = term.arguments().next()
+    kwargs = {}
+    for kv in prolog_dict:
+        kwargs[kv.functor()] = term2msg(kv.arguments().next())
+    return srv_resp_class(**kwargs)
+
