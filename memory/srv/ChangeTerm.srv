@@ -1,4 +1,0 @@
-string src
-memory/TermMetadata meta
----
-memory/TermMetadata[] metas
