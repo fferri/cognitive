@@ -6,6 +6,7 @@ import sys
 import threading
 import signal
 import rospy
+import time
 import tf
 from actionlib import SimpleActionClient, SimpleGoalState
 import pyclp
@@ -13,87 +14,134 @@ from move_base_msgs.msg import *
 from eclipse_prolog import *
 from memory.lib import *
 
+memory_listener=None
+memory_changed=False
+memory_content=[]
+
 class Indigolog(EclipseProlog):
     def __init__(self):
         EclipseProlog.__init__(self)
 
-        print('Compiling prolog code...')
-        self.compile(roslib.packages.get_pkg_dir('indigolog') + '/src/test.pl')
+        #print('Initialize move_base action client...')
+        #self.move_base = SimpleActionClient('move_base', MoveBaseAction)
+        #self.move_base.wait_for_server()
+        #self.move_base_goal=None
+        #self.move_base_result=None
 
-        print('Initialize move_base action client...')
-        self.move_base = SimpleActionClient('move_base', MoveBaseAction)
-        self.move_base.wait_for_server()
-        self.move_base_goal=None
-        self.move_base_result=None
+        self.topic_queue = []
 
-        print('Start prolog control loop...')
-        ret=self.post_goal(pyclp.Compound('indigolog', pyclp.Atom('control')))
+    def termmsg_to_pyclp(self, term):
+        return pyclp.Compound(term.functor,
+            list(pyclp.Atom(str(atom_get(atom))) for x in term.args))
 
-        print('Terminated successfully' if ret else 'Terminated with error')
+    def pyclpterms_to_atommsglist(self, args):
+        ret = []
+        for arg in args:
+            if type(arg) == pyclp.Compound:
+                raise Exception('Higher order term not allowed')
+            if type(arg) != pyclp.Atom:
+                raise Exception('Unsupported atom of type %s' % type(arg))
+            ret.append(atom_parse(str(arg)))
+        return ret
 
-    def yield_callback_atom(self, atom):
-        if str(atom) == 'check_exog_occurs':
-            return self.callback_check_exog_occurs()
-        else:
-            raise Exception('yield called with: %s' % atom)
+    def pyclpterm_to_msg(self, term):
+        if type(term) == pyclp.Atom:
+            return Term(functor='', args=[atom_parse(str(term))])
+        if type(term) == pyclp.Compound:
+            return Term(functor=term.functor(), args=pyclpterms_to_atommsglist(term.arguments()))
+        if type(term) in [int, str, float]:
+            return Term(functor='', args=[atom_parse(term)])
+        raise Exception('wtf term - guru meditation code 65438')
 
-    def yield_callback_compound(self, compound):
-        head=(compound.functor(), compound.arity())
-        args=list(compound.arguments())
-        if head == ('execute', 1):
-            return self.callback_execute(args[0])
-        else:
-            raise Exception('yield called with: %s/%d [%s]' % (head[0], head[1], args))
+    def run_controller(self, proc_name):
+        return self.post_goal(pyclp.Compound('indigolog', pyclp.Atom(proc_name)))
 
-    def callback_execute(self, arg):
-        if type(arg) == pyclp.Compound and arg.functor() == 'move_base':
-            return self.callback_execute_move_base(list(arg.arguments()))
-        print('ERROR: called execute() for unmapped action term: %s' % arg)
-        return pyclp.Atom('0')
+    def yield_callback_execute_1(self, arg):
+        signature = 'execute_callback_%s_%d' % (arg.functor(), arg.arity())
+        if signature in dir(self):
+            method = getattr(self, signature)
+            args = list(arg.arguments())
+            return method(*args)
+        rospy.logerror('yield callback: execute: unmapped action term: %s' % arg)
+        return pyclp.Var()
 
-    def callback_execute_move_base(self, args):
-        px=py=pz=ar=ap=ay=0
-        if len(args) == 1 and str(args[0]) == 'wait':
-            self.move_base.wait_for_result()
-            result=self.move_base.get_result()
-            self.move_base_goal=None
-            return pyclp.Atom('1')
-        elif len(args) == 1 and str(args[0]) == 'abort':
-            self.move_base.cancel_goal()
-            self.move_base_goal=None
-            return pyclp.Atom('1')
-        elif len(args) == 3: px,py,ay=args
-        elif len(args) == 6: px,py,pz,ar,ap,ay=args
-        else: raise Exception('bad args %s for yield(execute())' % args)
-        if self.move_base_goal:
-            raise Exception('ERROR: there is already a move_base goal running')
-        if self.move_base_result:
-            rospy.logwarn('Discarding previous move_base reuslt (%s)' % self.move_base_result)
-        self.move_base_goal = MoveBaseGoal()
-        self.move_base_goal.target_pose.header.stamp = rospy.Time.now()
-        self.move_base_goal.target_pose.header.frame_id = '/map'
-        self.move_base_goal.target_pose.pose.position.x = float(px)
-        self.move_base_goal.target_pose.pose.position.y = float(py)
-        self.move_base_goal.target_pose.pose.position.z = float(pz)
-        q = tf.transformations.quaternion_from_euler(float(ar), float(ap), float(ay))
-        self.move_base_goal.target_pose.pose.orientation.x = q[0]
-        self.move_base_goal.target_pose.pose.orientation.y = q[1]
-        self.move_base_goal.target_pose.pose.orientation.z = q[2]
-        self.move_base_goal.target_pose.pose.orientation.w = q[3]
-        self.move_base.send_goal(self.move_base_goal)
+    def execute_callback_say_1(self, what):
+        print('>>> ' + str(what))
+        return pyclp.Atom('1')
 
-    def callback_check_exog_occurs(self):
+    def execute_callback_sleep_1(self, sleep_time):
+        time.sleep(float(sleep_time))
+        return pyclp.Atom('1')
+
+    def execute_callback_memrd_1(self, term_id):
+        term_id = str(term_id)
+        try:
+            meta = memory_listener.store.read(term_id)
+            print('    memrd(%s) -> %s' % (term_id, term_to_string(meta.term)))
+            return self.termmsg_to_pyclp(meta.term)
+        except:
+            return pyclp.Var()
+
+    def execute_callback_memwr_2(self, term_id, term):
+        term_id = str(term_id)
+        term = self.pyclpterm_to_msg(term)
+        memory_listener.client.write(term_id, term)
+        return pyclp.Atom('1')
+
+    def execute_callback_memrm_1(self, term_id):
+        term_id = str(term_id)
+        memory_listener.client.remove(term_id)
+        return pyclp.Atom('1')
+
+#    def execute_callback_move_base_1(self, action):
+#        action = str(action)
+#        if action == 'wait':
+#            self.move_base.wait_for_result()
+#            result=self.move_base.get_result()
+#            self.move_base_goal=None
+#            return pyclp.Atom('1')
+#        if action == 'abort':
+#            self.move_base.cancel_goal()
+#            self.move_base_goal=None
+#            return pyclp.Atom('1')
+#
+#    def execute_callback_move_base_3(self, px, py, ay):
+#        return self.execute_callback_move_base_6(px, py, 0, 0, 0, ay)
+#
+#    def execute_callback_move_base_6(self, px, py, pz, ar, ap, ay):
+#        if self.move_base_goal:
+#            raise Exception('ERROR: there is already a move_base goal running')
+#        if self.move_base_result:
+#            rospy.logwarn('Discarding previous move_base reuslt (%s)' % self.move_base_result)
+#        self.move_base_goal = MoveBaseGoal()
+#        self.move_base_goal.target_pose.header.stamp = rospy.Time.now()
+#        self.move_base_goal.target_pose.header.frame_id = '/map'
+#        self.move_base_goal.target_pose.pose.position.x = float(px)
+#        self.move_base_goal.target_pose.pose.position.y = float(py)
+#        self.move_base_goal.target_pose.pose.position.z = float(pz)
+#        q = tf.transformations.quaternion_from_euler(float(ar), float(ap), float(ay))
+#        self.move_base_goal.target_pose.pose.orientation.x = q[0]
+#        self.move_base_goal.target_pose.pose.orientation.y = q[1]
+#        self.move_base_goal.target_pose.pose.orientation.z = q[2]
+#        self.move_base_goal.target_pose.pose.orientation.w = q[3]
+#        self.move_base.send_goal(self.move_base_goal)
+#        return pyclp.Atom('1')
+
+    def yield_callback_check_exog_occurs_0(self):
         global memory_changed, memory_content
 
         if memory_changed:
             memory_changed=False
             return pyclp.Compound('memory_update', pyclp.PList(list(pyclp.Compound(t.functor, *(atom_get(a) for a in t.args)) for t in memory_content)))
 
-        if self.move_base_goal and self.move_base.simple_state == SimpleGoalState.DONE:
-            self.move_base.wait_for_result()
-            self.move_base_goal=None
-            result=self.move_base.get_result()
-            return pyclp.Compound('move_base', pyclp.Atom('end'))
+        if self.topic_queue:
+            return self.topic_queue.pop(0)
+
+        #if self.move_base_goal and self.move_base.simple_state == SimpleGoalState.DONE:
+        #    self.move_base.wait_for_result()
+        #    self.move_base_goal=None
+        #    result=self.move_base.get_result()
+        #    return pyclp.Compound('move_base', pyclp.Atom('end'))
 
         return pyclp.Atom('none')
 
@@ -114,9 +162,9 @@ class Indigolog(EclipseProlog):
 #        self.move_base_client.wait_for_result()
 #        print('move_base: Result is %s' % self.move_base_client.get_result())
 
-memory_listener=None
-memory_changed=False
-memory_content=[]
+    def topic_callback(self, data, topic_name):
+        EclipseProlog.topic_callback(self, data, topic_name)
+        self.topic_queue.append(pyclp.Compound('topic', pyclp.Atom(topic_name), msg2term(data)))
 
 def memcb(meta, src):
     global memory_content, memory_changed
@@ -125,10 +173,23 @@ def memcb(meta, src):
 
 if __name__ == "__main__":
     rospy.init_node('indigolog')
+    argv = rospy.myargv()
+
     print('Creating the memory listener...')
     memory_listener = MemoryListener(callback_add=memcb, callback_remove=memcb, callback_change=memcb)
     memcb(None, None)
 
     print('Starting indigolog...')
-    Indigolog()
+    indigolog = Indigolog()
+
+    src = argv[1] if len(argv) > 1 else roslib.packages.get_pkg_dir('indigolog') + '/src/test.pl'
+    print('Compiling prolog code (%s)...' % src)
+    indigolog.compile(src)
+
+    controller_proc = argv[2] if len(argv) > 2 else 'control'
+    print('Start indigolog control loop (%s)...' % controller_proc)
+    ret = indigolog.run_controller(controller_proc)
+
+    print('Terminated successfully' if ret else 'Terminated with error')
+
 
