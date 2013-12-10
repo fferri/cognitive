@@ -9,6 +9,7 @@ import sys
 import thread
 import rospy
 import pyclp
+import actionlib
 
 class EclipseProlog:
     def __init__(self):
@@ -20,11 +21,21 @@ class EclipseProlog:
         self.subscribers = {}
         self.topic_cache = {}
         self.services = {}
-        self.action_goals = {}
+        self.action_clients = {}
 
     def __del__(self):
         pyclp.cleanup()
 
+    ## @brief resume Eclipse execution also handling any I/O operation, yield,
+    ## and exceptions
+    ##
+    ## If execution interrupts due to a yield, the appropriate yield callback
+    ## is called, and execution is resumed again.
+    ##
+    ## Likewise, if execution interrupts due to I/O, the I/O is handled, and
+    ## execution resumes up to the end of the computation.
+    ##
+    ## @return The result of the computation (FAIL or SUCCEED)
     def resume(self):
         in_term=None
         while True:
@@ -135,9 +146,54 @@ class EclipseProlog:
         if not service_name in self.services:
             service_class = roslib.message.get_service_class(service_type)
             self.services[service_name] = rospy.ServiceProxy(service_name, service_class)
+        rospy.wait_for_service(service_name)
         resp = self.services[service_name](term2srv(service_data))
         return srv2term(resp)
 
+    def yield_callback_action_send_4(self, as_name, as_type, goal_id, data):
+        as_name = str(as_name)
+        as_type = str(as_type)
+        goal_id = str(goal_id)
+        if goal_id in self.action_clients:
+            raise Exception('goal \'%s\' already pending')
+        as_class = roslib.message.get_message_class(as_type + 'Action')
+        self.action_clients[goal_id] = actionlib.SimpleActionClient(as_name, as_class)
+        self.action_clients[goal_id].wait_for_server()
+        self.action_clients[goal_id].send_goal(term2msg(data))
+        return pyclp.Atom(goal_id)
+
+    def yield_callback_action_abort_1(self, goal_id):
+        self.action_clients[goal_id].cancel_goal()
+        #TODO: notify someone about the action abort
+        return pyclp.Var()
+
+    def yield_callback_action_wait_1(self, goal_id):
+        #self.action_clients[goal_id].wait_for_result(rospy.Duration.from_sec(5.0))
+        self.action_clients[goal_id].wait_for_result()
+        result = self.action_clients[goal_id].get_result()
+        #TODO: notify someone about the action end
+        return pyclp.Var()
+
+    def yield_callback_action_status_0(self):
+        self.get_finished_goals()
+
+    def get_finished_goals(self):
+        results = {}
+        print('*** get_finished_goals ***')
+        for (goal_id, client) in self.action_clients.items():
+            print('%s: state=%s, simple_state=%d, result=%s' % (goal_id, client.get_state(), client.simple_state, client.get_result()))
+            if client.simple_state == actionlib.SimpleGoalState.DONE:
+                client.wait_for_result()
+                results[goal_id] = client.get_result()
+        print('**************************')
+
+        # purge:
+        for (goal_id, result) in results.items():
+            del self.action_clients[goal_id]
+            self.action_result_callback(goal_id, result)
+
+    def action_result_callback(self, goal_id, result):
+        pass
 
 # ROS topic <-> Prolog utilities:
 def msg2term(msg):
