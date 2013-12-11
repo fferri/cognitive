@@ -114,6 +114,14 @@ class EclipseProlog:
         rospy.logwarn('yield callback: unhandled list: %s' % plist)
         return pyclp.Var()
 
+    def yield_callback_advertise_2(self, topic_name, topic_type):
+        topic_name = str(topic_name)
+        topic_type = str(topic_type)
+        if not topic_name in self.publishers:
+            topic_class = roslib.message.get_message_class(topic_type)
+            self.publishers[topic_name] = rospy.Publisher(topic_name, topic_class)
+        return pyclp.Var()
+
     def yield_callback_publish_3(self, topic_name, topic_type, topic_data):
         topic_name = str(topic_name)
         topic_type = str(topic_type)
@@ -220,6 +228,8 @@ def msg2term(msg):
     return pyclp.Compound(msg._type, pyclp.PList(list(pyclp.Compound(slot, msg2term(getattr(msg, slot))) for slot in msg.__slots__)))
 
 def term2msg(term):
+    if type(term) in [float, int]:
+        return term
     if type(term) == pyclp.PList:
         return list(term2msg(x) for x in term)
     if type(term) == pyclp.Atom:
