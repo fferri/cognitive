@@ -23,6 +23,9 @@ class EclipseProlog:
         self.services = {}
         self.action_clients = {}
 
+        # compile helper predicates:
+        self.compile(roslib.packages.get_pkg_dir('eclipse_prolog') + '/src/init.pl')
+
     def __del__(self):
         pyclp.cleanup()
 

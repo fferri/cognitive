@@ -22,10 +22,6 @@ execute(A,R) :- functor(A,F,N), ros_action(F/N), yield(A,R).
 execute(A,_) :- member(A,[start_interrupts, stop_interrupts]).
 exog_occurs(A) :- yield(check_exog_occurs,A).
 
-% for accessing msg/srv terms:
-dict_get(D,[],D).
-dict_get(D,[K|Ks],X) :- D =.. [_Type,Dict], member(KVPair,Dict), KVPair =.. [K,V], dict_get(V,Ks,X).
-
 ros_action(advertise/2).
 ros_action(publish/3).
 ros_action(unpublish/1).

@@ -46,11 +46,14 @@ class Indigolog(EclipseProlog):
         self.exog_queue = Queue()
 
         # ROS memory integration:
-        rospy.loginfo('Creating the memory listener...')
+        print('Creating the memory listener...')
         self.memory_listener = MemoryListener(callback_add=self.memory_add_callback, callback_remove=self.memory_remove_callback, callback_change=self.memory_change_callback)
         # send add events for every term in the memory:
         for meta in self.memory_listener.store.get_all():
             self.memory_add_callback(meta, meta.src)
+
+        # compile helper predicates:
+        self.compile(roslib.packages.get_pkg_dir('indigolog') + '/src/indigolog_interface.pl')
 
     def run_controller(self, proc_name):
         return self.post_goal(pyclp.Compound('indigolog', pyclp.Atom(proc_name)))
@@ -112,10 +115,6 @@ if __name__ == "__main__":
 
     print('Starting indigolog...')
     indigolog = Indigolog()
-
-    src = roslib.packages.get_pkg_dir('indigolog') + '/src/indigolog_interface.pl'
-    print('Compiling Prolog/Indigolog interface...')
-    indigolog.compile(src)
 
     src = argv[1] if len(argv) > 1 else roslib.packages.get_pkg_dir('indigolog') + '/src/test.pl'
     print('Compiling Prolog code (%s)...' % src)
