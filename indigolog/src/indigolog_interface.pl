@@ -26,6 +26,7 @@ exog_occurs(A) :- yield(check_exog_occurs,A).
 dict_get(D,[],D).
 dict_get(D,[K|Ks],X) :- D =.. [_Type,Dict], member(KVPair,Dict), KVPair =.. [K,V], dict_get(V,Ks,X).
 
+ros_action(advertise/2).
 ros_action(publish/3).
 ros_action(unpublish/1).
 ros_action(subscribe/2).
