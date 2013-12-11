@@ -113,10 +113,19 @@ if __name__ == "__main__":
     rospy.init_node('indigolog')
     argv = rospy.myargv()
 
+    if len(argv) <= 1:
+        print('Usage: rosrun indigolog indigolog <file> [controller_proc]')
+        print('')
+        print('Arguments:')
+        print(' file             a script containing indigolog KB and controller')
+        print(' controller_proc  the name of the main proc (default: control)')
+        print('')
+        sys.exit(1)
+
     print('Starting indigolog...')
     indigolog = Indigolog()
 
-    src = argv[1] if len(argv) > 1 else roslib.packages.get_pkg_dir('indigolog') + '/src/test.pl'
+    src = argv[1]
     print('Compiling Prolog code (%s)...' % src)
     indigolog.compile(src)
 
