@@ -220,7 +220,7 @@ class EclipseProlog:
 # ROS topic <-> Prolog utilities:
 def msg2term(msg):
     if type(msg) in [float, int, str]:
-        return msg
+        return pyclp.Atom(str(msg))
     if type(msg) in [list, tuple]:
         return pyclp.PList(list(msg2term(x) for x in msg))
     if type(msg) == genpy.rostime.Time:
@@ -228,7 +228,7 @@ def msg2term(msg):
     return pyclp.Compound(msg._type, pyclp.PList(list(pyclp.Compound(slot, msg2term(getattr(msg, slot))) for slot in msg.__slots__)))
 
 def term2msg(term):
-    if type(term) in [float, int]:
+    if type(term) in [float, int, str]:
         return term
     if type(term) == pyclp.PList:
         return list(term2msg(x) for x in term)
