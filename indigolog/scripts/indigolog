@@ -48,46 +48,39 @@ class Indigolog(EclipseProlog):
         # ROS memory integration:
         rospy.loginfo('Creating the memory listener...')
         self.memory_listener = MemoryListener(callback_add=self.memory_add_callback, callback_remove=self.memory_remove_callback, callback_change=self.memory_change_callback)
-        # TODO: send add events for every term in the memory
+        # send add events for every term in the memory:
         for meta in self.memory_listener.store.get_all():
             self.memory_add_callback(meta, meta.src)
 
     def run_controller(self, proc_name):
         return self.post_goal(pyclp.Compound('indigolog', pyclp.Atom(proc_name)))
 
-    def yield_callback_execute_1(self, arg):
-        signature = 'execute_callback_%s_%d' % (arg.functor(), arg.arity())
-        if signature in dir(self):
-            method = getattr(self, signature)
-            args = list(arg.arguments())
-            return method(*args)
-        rospy.logerror('yield callback: execute: unmapped action term: %s' % arg)
-        return pyclp.Var()
-
-    def execute_callback_say_1(self, what):
+    def yield_callback_say_1(self, what):
+        if type(what) == pyclp.PList:
+            what = ''.join(str(w) for w in what)
         print('>>> ' + str(what))
         return pyclp.Atom('1')
 
-    def execute_callback_sleep_1(self, sleep_time):
+    def yield_callback_sleep_1(self, sleep_time):
         time.sleep(float(sleep_time))
         return pyclp.Atom('1')
 
-    def execute_callback_memory_read_1(self, term_id):
+    def yield_callback_memory_read_1(self, term_id):
         term_id = str(term_id)
         try:
             meta = memory_listener.store.read(term_id)
-            print('    memrd(%s) -> %s' % (term_id, term_to_string(meta.term)))
+            print('    memory_read(%s) -> %s' % (term_id, term_to_string(meta.term)))
             return self.termmsg_to_pyclp(meta.term)
         except:
             return pyclp.Var()
 
-    def execute_callback_memory_write_2(self, term_id, term):
+    def yield_callback_memory_write_2(self, term_id, term):
         term_id = str(term_id)
         term = self.pyclpterm_to_msg(term)
         memory_listener.client.write(term_id, term)
         return pyclp.Atom('1')
 
-    def execute_callback_memory_remove_1(self, term_id):
+    def yield_callback_memory_remove_1(self, term_id):
         term_id = str(term_id)
         memory_listener.client.remove(term_id)
         return pyclp.Atom('1')
@@ -95,7 +88,7 @@ class Indigolog(EclipseProlog):
     def yield_callback_check_exog_occurs_0(self):
         if not self.exog_queue.empty():
             exog = self.exog_queue.get()
-            rospy.loginfo('deliver exog: ' + str(exog))
+            #rospy.loginfo('deliver exog: ' + str(exog))
             return exog
         return pyclp.Atom('none')
 
@@ -120,8 +113,12 @@ if __name__ == "__main__":
     print('Starting indigolog...')
     indigolog = Indigolog()
 
+    src = roslib.packages.get_pkg_dir('indigolog') + '/src/indigolog_interface.pl'
+    print('Compiling Prolog/Indigolog interface...')
+    indigolog.compile(src)
+
     src = argv[1] if len(argv) > 1 else roslib.packages.get_pkg_dir('indigolog') + '/src/test.pl'
-    print('Compiling prolog code (%s)...' % src)
+    print('Compiling Prolog code (%s)...' % src)
     indigolog.compile(src)
 
     controller_proc = argv[2] if len(argv) > 2 else 'control'
