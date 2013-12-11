@@ -26,7 +26,7 @@ class EclipseProlog:
     def __del__(self):
         pyclp.cleanup()
 
-    ## @brief resume Eclipse execution also handling any I/O operation, yield,
+    ## @brief Resume Eclipse execution also handling any I/O operation, yield,
     ## and exceptions
     ##
     ## If execution interrupts due to a yield, the appropriate yield callback
@@ -57,6 +57,13 @@ class EclipseProlog:
             else:
                 raise Exception('eclipse: unknown result: %d' % result)
 
+    ## @brief Post a goal and resume execution
+    ##
+    ## @param term The goal
+    ## 
+    ## @param exc If specified, and the goal fails, throw this exception
+    ##
+    ## @return The exit value of the goal
     def post_goal(self, term, exc=None):
         term.post_goal()
         result=self.resume()
@@ -65,10 +72,17 @@ class EclipseProlog:
         else:
             return result
 
+    ## @brief Compile the specified file
+    ##
+    ## @param filename The file to compile
     def compile(self, filename):
         self.post_goal(pyclp.Compound('compile', pyclp.Atom(filename)),
             Exception('Failed to compile %s' % filename))
 
+    ## @brief This callback gets called when Eclipse execution interrupts
+    ## due to a yield/1 or yield/2 call
+    ##
+    ## @param x The argument to return as second argument of yield/2
     def yield_callback(self, x):
         if type(x) == pyclp.Atom:
             return self.yield_callback_atom(x)
