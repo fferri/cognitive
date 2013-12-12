@@ -15,7 +15,7 @@ proc(control,
         say('waiting for term \'foo\' to change in the memory...'),
 
         prioritized_interrupts([
-            interrupt(foo=nil, wait),
+            interrupt(foo=nil, sleep(0.5)), %wait
             interrupt(neg(foo=nil), pi(x, [
                 ?(x=foo),
                 say(['somebody wrote foo=', x, '; deleting it...']),

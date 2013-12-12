@@ -11,7 +11,7 @@ proc(control,
         subscribe('/cmd_vel', 'geometry_msgs/Twist'),
 
         say('waiting for some message on the /cmd_vel topic...'),
-        while('/cmd_vel'=nil, [wait]),
+        while('/cmd_vel'=nil, sleep(0.5)),
 
         pi(msg, [
             ?(msg='/cmd_vel'),

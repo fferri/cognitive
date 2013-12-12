@@ -18,7 +18,7 @@ proc(control,
 
         say('entering interrupt block...'),
         prioritized_interrupts([
-            interrupt('/cmd_vel'=nil, wait),
+            interrupt('/cmd_vel'=nil, sleep(0.5)), % wait
             interrupt(neg('/cmd_vel'=nil), pi(msg, [?(msg='/cmd_vel'), say(msg), clear('/cmd_vel')]))
         ]),
 
