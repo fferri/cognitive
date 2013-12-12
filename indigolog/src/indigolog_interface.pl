@@ -28,6 +28,10 @@ ros_action(unpublish/1).
 ros_action(subscribe/2).
 ros_action(unsubscribe/1).
 ros_action(call_service/3).
+ros_action(action_send/4).
+ros_action(action_abort/1).
+ros_action(action_wait/1).
+ros_action(action_status/0).
 ros_action(say/1).
 ros_action(sleep/1).
 ros_action(memory_read/1).
@@ -35,6 +39,7 @@ ros_action(memory_write/2).
 ros_action(memory_remove/1).
 
 ros_exog_action(topic/2).
+ros_exog_action(action_end/1).
 ros_exog_action(memory_add/3).
 ros_exog_action(memory_remove/2).
 ros_exog_action(memory_change/3).
@@ -57,6 +62,4 @@ causes_val(topic(N,V), N, V, true) :- prim_fluent(N).
 causes_val(memory_add(K,V,_), K, V, true) :- prim_fluent(K).
 causes_val(memory_change(K,V,_), K, V, true) :- prim_fluent(K).
 causes_val(memory_remove(K,_), K, nil, true) :- prim_fluent(K).
-
-proc(wait, [sleep(0.1)]).
 
