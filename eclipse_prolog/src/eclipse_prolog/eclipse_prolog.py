@@ -10,6 +10,7 @@ import thread
 import rospy
 import pyclp
 import actionlib
+import tf
 
 class EclipseProlog:
     def __init__(self):
@@ -188,11 +189,13 @@ class EclipseProlog:
         return pyclp.Atom(goal_id)
 
     def yield_callback_action_abort_1(self, goal_id):
+        goal_id = str(goal_id)
         self.action_clients[goal_id].cancel_goal()
         #TODO: notify someone about the action abort
         return pyclp.Var()
 
     def yield_callback_action_wait_1(self, goal_id):
+        goal_id = str(goal_id)
         #self.action_clients[goal_id].wait_for_result(rospy.Duration.from_sec(5.0))
         self.action_clients[goal_id].wait_for_result()
         result = self.action_clients[goal_id].get_result()
@@ -206,7 +209,7 @@ class EclipseProlog:
         results = {}
         print('*** get_finished_goals ***')
         for (goal_id, client) in self.action_clients.items():
-            print('%s: state=%s, simple_state=%d, result=%s' % (goal_id, client.get_state(), client.simple_state, client.get_result()))
+            print('%s: state=%s, simple_state=%s, result=%s' % (goal_id, actionlib.GoalStatus.to_string(client.get_state()), actionlib.SimpleGoalState.to_string(client.simple_state), client.get_result()))
             if client.simple_state == actionlib.SimpleGoalState.DONE:
                 client.wait_for_result()
                 results[goal_id] = client.get_result()
@@ -219,6 +222,10 @@ class EclipseProlog:
 
     def action_result_callback(self, goal_id, result):
         pass
+
+    def yield_callback_quaternion_from_euler_1(self, rpy):
+        q = tf.transformations.quaternion_from_euler(*list(float(x) for x in rpy))
+        return pyclp.PList(list(pyclp.Atom(str(x)) for x in q))
 
 # ROS topic <-> Prolog utilities:
 def msg2term(msg):
@@ -244,7 +251,8 @@ def term2msg(term):
             except:
                 return str(term)
     if term.functor() == 'time':
-        return genpy.rostime.Time(float(term.arguments().next()))
+        time_arg = term.arguments().next()
+        return rospy.Time.now() if str(time_arg) == 'now' else genpy.rostime.Time(float(time_arg))
     topic_class = roslib.message.get_message_class(term.functor())
     prolog_dict = term.arguments().next()
     kwargs = {}
