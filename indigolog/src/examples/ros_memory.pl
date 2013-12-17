@@ -5,8 +5,6 @@ initially(foo, nil).
 
 proc(control,
     [
-        say('control started'),
-
         if(neg(foo=nil), [
             say('there is already a term \'foo\' in the memory; deleting it...'),
             memory_remove(foo)
@@ -23,9 +21,7 @@ proc(control,
                 memory_remove(foo),
                 sleep(0.5)
             ]))
-        ]),
-
-        say('control is terminating')
+        ])
     ]
 ).
 

@@ -11,8 +11,6 @@ execute(clear(F), _) :- prim_fluent(F).
 
 proc(control,
     [
-        say('control started'),
-
         say('subscribing to /cmd_vel topic...'),
         subscribe('/cmd_vel', 'geometry_msgs/Twist'),
 
@@ -20,9 +18,7 @@ proc(control,
         prioritized_interrupts([
             interrupt('/cmd_vel'=nil, sleep(0.5)), % wait
             interrupt(neg('/cmd_vel'=nil), pi(msg, [?(msg='/cmd_vel'), say(msg), clear('/cmd_vel')]))
-        ]),
-
-        say('control is terminating')
+        ])
     ]
 ).
 

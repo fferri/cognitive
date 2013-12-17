@@ -9,8 +9,6 @@ execute(incr, _).
 
 proc(control,
     [
-        say('control started'),
-
         say('advertising /my_counter topic...'),
         advertise('/my_counter', 'std_msgs/Int32'),
 
@@ -22,9 +20,7 @@ proc(control,
                 incr,
                 sleep(1)
             ])])
-        ]),
-
-        say('control is terminating')
+        ])
     ]
 ).
 

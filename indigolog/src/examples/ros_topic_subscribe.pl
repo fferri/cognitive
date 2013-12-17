@@ -5,8 +5,6 @@ initially('/cmd_vel', nil).
 
 proc(control,
     [
-        say('control started'),
-
         say('subscribing to /cmd_vel topic...'),
         subscribe('/cmd_vel', 'geometry_msgs/Twist'),
 
@@ -17,9 +15,7 @@ proc(control,
             ?(msg='/cmd_vel'),
             say(['received a message: ', msg]),
             pi(linx, [?(dict_get(msg, 'linear.x', linx)), say(['linear.x value is: ', linx])])
-        ]),
-
-        say('control is terminating')
+        ])
     ]
 ).
 
