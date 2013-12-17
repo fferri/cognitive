@@ -51,6 +51,9 @@ class EclipseProlog:
                 data = self.ecl_stream_stdout.readall()
                 if data:
                     sys.stdout.write(data)
+                data = self.ecl_stream_stderr.readall()
+                if data:
+                    sys.stderr.write(data)
             elif result == pyclp.WAITIO:
                 print('eclipse: WAITIO: not implemented')
             elif result == pyclp.YIELD:
@@ -180,57 +183,119 @@ class EclipseProlog:
         as_name = str(as_name)
         as_type = str(as_type)
         goal_id = str(goal_id)
-        if goal_id in self.action_clients:
-            raise Exception('goal \'%s\' already pending')
+        rospy.logdebug('action_send(%s, %s, %s, %s)' % (as_name, as_type, goal_id, data))
+        #if goal_id in self.action_clients:
+        #    raise Exception('goal \'%s\' already pending', goal_id)
+
+        rospy.logdebug('resolving actionlib message class \'%s\'' % as_type)
         as_class = roslib.message.get_message_class(as_type + 'Action')
+        rospy.logdebug('resolved to %s' % as_class)
+
+        rospy.logdebug('creating a SimpleActionClient(%s, %s) for goal id \'%s\'' % (as_name, as_class, goal_id))
         self.action_clients[goal_id] = actionlib.SimpleActionClient(as_name, as_class)
+
+        rospy.logdebug('waiting for actionlib server \'%s\'...' % as_name)
         self.action_clients[goal_id].wait_for_server()
-        self.action_clients[goal_id].send_goal(term2msg(data))
+
+        rospy.logdebug('sending goal id \'%s\': %s' % (goal_id, data))
+        self.action_clients[goal_id].send_goal(term2msg(data),
+            lambda state, result: self.action_done_callback(goal_id, state, result),
+            lambda: self.action_active_callback(goal_id),
+            lambda feedback: self.action_feedback_callback(goal_id, feedback))
+
         return pyclp.Atom(goal_id)
 
     def yield_callback_action_abort_1(self, goal_id):
         goal_id = str(goal_id)
-        self.action_clients[goal_id].cancel_goal()
-        #TODO: notify someone about the action abort
+        if goal_id in self.action_clients:
+            rospy.logdebug('aborting goal id \'%s\'...' % goal_id)
+            self.action_clients[goal_id].cancel_goal()
+            rospy.logdebug('aborted goal id \'%s\'' % goal_id)
+            #TODO: notify someone about the action abort
+        else:
+            rospy.logwarn('cannot abort unexistsnt goal id \'%s\'' % goal_id)
         return pyclp.Var()
 
     def yield_callback_action_wait_1(self, goal_id):
         goal_id = str(goal_id)
-        #self.action_clients[goal_id].wait_for_result(rospy.Duration.from_sec(5.0))
-        self.action_clients[goal_id].wait_for_result()
-        result = self.action_clients[goal_id].get_result()
-        #TODO: notify someone about the action end
-        return pyclp.Var()
+        if goal_id in self.action_clients:
+            rospy.logdebug('waiting goal id \'%s\'...' % goal_id)
+            client = self.action_clients[goal_id]
+            #client.wait_for_result(rospy.Duration.from_sec(5.0))
+            client.wait_for_result()
+            result = client.get_result()
+            status = actionlib.GoalStatus.to_string(client.get_state()).lower()
+            rospy.logdebug('result of goal id \'%s\' is: %s' % (goal_id, result))
+            rospy.logdebug('status for goal id \'%s\' is: %s' % (goal_id, status))
+            #TODO: notify someone about the action end
+            return msg2term(result)
+        else:
+            rospy.logwarn('cannot wait unexistent goal id \'%s\'' % goal_id)
+            return pyclp.Var()
 
-    def yield_callback_action_status_0(self):
-        self.get_finished_goals()
+    def yield_callback_action_status_1(self, goal_id):
+        goal_id = str(goal_id)
+        if goal_id in self.action_clients:
+            rospy.logdebug('retrieving status for goal id \'%s\'...' % goal_id)
+            client = self.action_clients[goal_id]
+            status = actionlib.GoalStatus.to_string(client.get_state()).lower()
+            rospy.logdebug('status for goal id \'%s\' is: %s' % (goal_id, status))
+            return pyclp.Atom(status)
+        else:
+            rospy.logwarn('cannot get status of unexistent goal id \'%s\'' % goal_id)
+            return pyclp.Var()
 
-    def get_finished_goals(self):
-        results = {}
-        print('*** get_finished_goals ***')
-        for (goal_id, client) in self.action_clients.items():
-            print('%s: state=%s, simple_state=%s, result=%s' % (goal_id, actionlib.GoalStatus.to_string(client.get_state()), actionlib.SimpleGoalState.to_string(client.simple_state), client.get_result()))
-            if client.simple_state == actionlib.SimpleGoalState.DONE:
-                client.wait_for_result()
-                results[goal_id] = client.get_result()
-        print('**************************')
+    def yield_callback_action_status_simple_1(self, goal_id):
+        goal_id = str(goal_id)
+        if goal_id in self.action_clients:
+            rospy.logdebug('retrieving simple status for goal id \'%s\'...' % goal_id)
+            client = self.action_clients[goal_id]
+            status = actionlib.SimpleGoalState.to_string(client.simple_state)
+            rospy.logdebug('simple status for goal id \'%s\' is: %s' % (goal_id, status))
+            return pyclp.Atom(status)
+        else:
+            rospy.logwarn('cannot get simple status of unexistent goal id \'%s\'' % goal_id)
+            return pyclp.Var()
+
+    #def check_actions_end(self):
+        #finished = []
+
+        #for (goal_id, client) in self.action_clients.items():
+        #    if client.simple_state == actionlib.SimpleGoalState.DONE:
+        #        self.action_end_callback(goal_id)
+        #        client.wait_for_result()
+        #        result = client.get_result()
+        #        self.action_result_callback(goal_id, result)
+        #        finished.append(goal_id)
 
         # purge:
-        for (goal_id, result) in results.items():
-            del self.action_clients[goal_id]
-            self.action_result_callback(goal_id, result)
+        #for goal_id in finished:
+        #    del self.action_clients[goal_id]
 
-    def action_result_callback(self, goal_id, result):
+    ## @brief This callback gets called on transitions to done
+    def action_done_callback(self, goal_id, state, result):
+        pass
+
+    ## @brief This callback gets called on transitions to active
+    def action_active_callback(self, goal_id):
+        pass
+
+    ## @brief This callback gets called whenever feedback for the goal is received
+    def action_feedback_callback(self, goal_id, feedback):
         pass
 
     def yield_callback_quaternion_from_euler_1(self, rpy):
         q = tf.transformations.quaternion_from_euler(*list(float(x) for x in rpy))
-        return pyclp.PList(list(pyclp.Atom(str(x)) for x in q))
+        return pyclp.PList(list(pyclp.Term(x) for x in q))
 
 # ROS topic <-> Prolog utilities:
 def msg2term(msg):
-    if type(msg) in [float, int, str]:
-        return pyclp.Atom(str(msg))
+    if msg is None:
+        return pyclp.Atom('none')
+    if type(msg) in [float, int]:
+        return pyclp.Term(msg)
+    if type(msg) in [str]:
+        return pyclp.Atom(msg)
     if type(msg) in [list, tuple]:
         return pyclp.PList(list(msg2term(x) for x in msg))
     if type(msg) == genpy.rostime.Time:
@@ -238,6 +303,8 @@ def msg2term(msg):
     return pyclp.Compound(msg._type, pyclp.PList(list(pyclp.Compound(slot, msg2term(getattr(msg, slot))) for slot in msg.__slots__)))
 
 def term2msg(term):
+    if type(term) == pyclp.Atom and str(term) == 'none':
+        return None
     if type(term) in [float, int, str]:
         return term
     if type(term) == pyclp.PList:
