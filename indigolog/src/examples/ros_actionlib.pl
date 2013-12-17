@@ -11,30 +11,36 @@ proc(move_base_action(GoalID,Frame,X,Y,Theta),
             ]))
         ]))
     ]))
-) :- yield(quaternion_from_euler([0,0,Theta]),[QX,QY,QZ,QW]), QW1 is 666*QW, writeln([quat,[QX,QY,QZ,QW1]]).
+) :- yield(quaternion_from_euler([0,0,Theta]),[QX,QY,QZ,QW]).
+
+prim_fluent(action_status(move_base)).
+initially(action_status(move_base), nil).
+
+proc(print_status(GoalID), [
+    action_status(GoalID), pi(x, [?(x=action_status(GoalID)), say(['Goal "',GoalID,'" has status ',x])])
+]).
 
 proc(control,
     [
-        say('control started'),
-
         say('sending goal...'),
-        move_base_action(g,'/base_link', 0.8, 0.8, 0.0),
+        move_base_action(move_base,'/base_link', 0.8, 0.1, 0.0),
         say('waiting completion...'),
-        action_wait(g),
+        action_wait(move_base),
         say('completed!'),
 
-        action_status,
+        print_status(move_base),
 
         say('sending goal...'),
-        move_base_action(g2,'/base_link', -0.8, -0.8, 0.0),
+        move_base_action(move_base,'/base_link', -0.8, -0.1, 0.0),
         say('sleep 8s...'),
         sleep(8),
+        print_status(move_base),
         say('abort goal...'),
-        action_abort(g2),
+        action_abort(move_base),
 
-        action_status,
-
-        say('control is terminating')
+        print_status(move_base),
+        sleep(1),
+        print_status(move_base)
     ]
 ).
 
