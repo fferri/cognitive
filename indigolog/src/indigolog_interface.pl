@@ -11,7 +11,7 @@
 :- multifile(execute/2).
 :- multifile(exog_occurs/1).
 :- multifile(initially/2).
-:- ['indigolog/Interpreters/indigolog-vanilla'].
+:- ['/opt/indigolog/Interpreters/indigolog-vanilla'].
 
 %for simulation:
 %execute(A,R) :- ask_execute(A,R).
@@ -31,7 +31,8 @@ ros_action(call_service/3).
 ros_action(action_send/4).
 ros_action(action_abort/1).
 ros_action(action_wait/1).
-ros_action(action_status/0).
+ros_action(action_status/1).
+ros_action(action_status_simple/1).
 ros_action(say/1).
 ros_action(sleep/1).
 ros_action(memory_read/1).
@@ -39,7 +40,8 @@ ros_action(memory_write/2).
 ros_action(memory_remove/1).
 
 ros_exog_action(topic/2).
-ros_exog_action(action_end/1).
+ros_exog_action(action_end/3).
+ros_exog_action(action_feedback/2).
 ros_exog_action(memory_add/3).
 ros_exog_action(memory_remove/2).
 ros_exog_action(memory_change/3).
@@ -47,13 +49,11 @@ ros_exog_action(memory_change/3).
 prim_action(A) :- functor(A,F,N), ros_action(F/N).
 poss(A, true) :- functor(A,F,N), ros_action(F/N).
 
-%exog_occurs(_) :- !,fail.
-
 senses(memory_read(X),X).
-
 senses(call_service(N,_,_),N) :- prim_fluent(N).
-
-%senses(_,_) :- fail.
+senses(action_wait(G),F) :- F=action_result(G), prim_fluent(F).
+senses(action_status(G),F) :- F=action_status(G), prim_fluent(F).
+senses(action_status_simple(G),F) :- F=action_status_simple(G), prim_fluent(F).
 
 exog_action(A) :- functor(A,F,N), ros_exog_action(F/N).
 poss(A, true) :- functor(A,F,N), ros_exog_action(F/N).
