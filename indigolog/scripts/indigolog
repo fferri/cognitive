@@ -8,7 +8,7 @@ import signal
 import rospy
 import time
 import tf
-from actionlib import SimpleActionClient, SimpleGoalState
+import actionlib
 import pyclp
 from move_base_msgs.msg import *
 from eclipse_prolog import *
@@ -54,6 +54,8 @@ class Indigolog(EclipseProlog):
 
         # compile helper predicates:
         self.compile(roslib.packages.get_pkg_dir('indigolog') + '/src/indigolog_interface.pl')
+        # and indigolog interpreter:
+        #self.compile('/opt/indigolog/Interpreters/indigolog-vanilla.pl')
 
     def run_controller(self, proc_name):
         return self.post_goal(pyclp.Compound('indigolog', pyclp.Atom(proc_name)))
@@ -98,6 +100,16 @@ class Indigolog(EclipseProlog):
     def topic_callback(self, data, topic_name):
         EclipseProlog.topic_callback(self, data, topic_name)
         self.exog_queue.put(pyclp.Compound('topic', pyclp.Atom(topic_name), msg2term(data)))
+
+    def action_done_callback(self, goal_id, state, result):
+        state = actionlib.GoalStatus.to_string(state).lower()
+        self.exog_queue.put(pyclp.Compound('action_end', pyclp.Atom(goal_id), pyclp.Atom(state), msg2term(result)))
+
+    #def action_active_callback(self, goal_id):
+    #    pass
+
+    def action_feedback_callback(self, goal_id, feedback):
+        self.exog_queue.put(pyclp.Compound('action_feedback', pyclp.Atom(goal_id), msg2term(feedback)))
 
     def memory_add_callback(self, meta, src):
         self.exog_queue.put(pyclp.Compound('memory_add', pyclp.Atom(meta.term_id), termmsg_to_pyclp(meta.term), src))
