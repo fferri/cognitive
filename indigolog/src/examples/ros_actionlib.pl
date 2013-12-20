@@ -23,11 +23,10 @@ proc(print_status(GoalID), [
 proc(control,
     [
         say('sending goal...'),
-        move_base_action(move_base,'/base_link', 0.8, 0.1, 0.0),
+        move_base_action(move_base,'/base_link', 0.3, 0.3, 0.0),
         say('waiting completion...'),
         action_wait(move_base),
         say('completed!'),
-
         print_status(move_base),
 
         say('sending goal...'),
