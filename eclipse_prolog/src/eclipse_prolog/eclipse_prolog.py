@@ -6,7 +6,9 @@ import genpy
 import roslib.message
 import roslib.packages
 import sys
-import thread
+import subprocess
+import threading
+import time
 import rospy
 import pyclp
 import actionlib
@@ -23,6 +25,7 @@ class EclipseProlog:
         self.topic_cache = {}
         self.services = {}
         self.action_clients = {}
+        self.subprocesses = {}
 
         # compile helper predicates:
         self.compile(roslib.packages.get_pkg_dir('eclipse_prolog') + '/src/init.pl')
@@ -287,6 +290,65 @@ class EclipseProlog:
     def yield_callback_quaternion_from_euler_1(self, rpy):
         q = tf.transformations.quaternion_from_euler(*list(float(x) for x in rpy))
         return pyclp.PList(list(pyclp.Term(x) for x in q))
+
+    def yield_callback_subprocess_open_2(self, process_id, args):
+        process_id = str(process_id)
+        if process_id in self.subprocesses and self.subprocesses[process_id].poll():
+            rospy.logerror('subprocess \'%s\' already running' % process_id)
+            return pyclp.Var()
+        args = list(str(arg) for arg in args)
+        rospy.logdebug('starting process id \'%s\' with args %s...' % (process_id, args))
+        self.subprocesses[process_id] = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        threading.Thread(target=self.subprocess_reader_thread, args=(process_id,'stdout')).start()
+        threading.Thread(target=self.subprocess_reader_thread, args=(process_id,'stderr')).start()
+        threading.Thread(target=self.subprocess_wait_thread, args=(process_id,)).start()
+        rospy.logdebug('started process id \'%s\'' % process_id)
+        return pyclp.Var()
+
+    def subprocess_reader_thread(self, process_id, channel_name):
+        rospy.logdebug('reader_thread[%s:%s]: started' % (process_id, channel_name))
+        for line in iter(getattr(self.subprocesses[process_id], channel_name).readline, ''):
+            line = line.rstrip('\n')
+            rospy.logdebug('reader_thread[%s:%s]: %s' % (process_id, channel_name, line))
+            self.subprocess_output_callback(process_id, channel_name, line)
+        rospy.logdebug('reader_thread[%s:%s]: finished' % (process_id, channel_name))
+
+    def subprocess_wait_thread(self, process_id):
+        rospy.logdebug('wait_thread[%s]: started' % (process_id,))
+        exit_code = self.subprocesses[process_id].wait()
+        self.subprocess_end_callback(process_id, exit_code)
+        #del self.subprocesses[process_id]
+        rospy.logdebug('wait_thread[%s]: finished. exit code: %d' % (process_id, exit_code))
+
+    def yield_callback_subprocess_wait_1(self, process_id):
+        process_id = str(process_id)
+        if process_id not in self.subprocesses:
+            rospy.logwarn('cannot wait on unexistent process id \'%s\'' % process_id)
+            return pyclp.Var()
+        rospy.logdebug('waiting on process id \'%s\'' % process_id)
+        exit_code = self.subprocesses[process_id].wait()
+        del self.subprocesses[process_id]
+        rospy.logdebug('got exit code %d from process id \'%s\'' % (exit_code, process_id))
+        return pyclp.Term(exit_code)
+
+    def yield_callback_subprocess_kill_1(self, process_id):
+        process_id = str(process_id)
+        if process_id in self.subprocesses:
+            rospy.logdebug('trying to kill process id \'%s\'' % process_id)
+            self.subprocesses[process_id].kill()
+            #self.subprocesses[process_id].terminate()
+            rospy.logdebug('killed process id \'%s\'' % process_id)
+            return pyclp.Var()
+        else:
+            rospy.logwarn('cannot kill unexistent process id \'%s\'' % process_id)
+            return pyclp.Var()
+
+    def subprocess_output_callback(self, process_id, stream, line):
+        pass
+
+    def subprocess_end_callback(self, process_id, exit_code):
+        pass
+
 
 # ROS topic <-> Prolog utilities:
 def msg2term(msg):

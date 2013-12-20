@@ -120,6 +120,11 @@ class Indigolog(EclipseProlog):
     def memory_change_callback(self, meta, src):
         self.exog_queue.put(pyclp.Compound('memory_change', pyclp.Atom(meta.term_id), termmsg_to_pyclp(meta.term), pyclp.Atom(src)))
 
+    def subprocess_output_callback(self, process_id, stream, line):
+        self.exog_queue.put(pyclp.Compound('subprocess_output', pyclp.Atom(process_id), pyclp.Atom(stream), pyclp.Atom(line)))
+
+    def subprocess_end_callback(self, process_id, exit_code):
+        self.exog_queue.put(pyclp.Compound('subprocess_end', pyclp.Atom(process_id), pyclp.Term(exit_code)))
 
 if __name__ == "__main__":
     rospy.init_node('indigolog')
