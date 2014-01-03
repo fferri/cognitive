@@ -126,6 +126,10 @@ class Indigolog(EclipseProlog):
     def subprocess_end_callback(self, process_id, exit_code):
         self.exog_queue.put(pyclp.Compound('subprocess_end', pyclp.Atom(process_id), pyclp.Term(exit_code)))
 
+    def call_service_async_callback(self, result, service_name, call_id):
+        #call_id = pyclp.Atom()
+        self.exog_queue.put(pyclp.Compound('service_async_result', srv2term(result), pyclp.Atom(service_name), pyclp.Atom(call_id)))
+
 if __name__ == "__main__":
     rospy.init_node('indigolog')
     argv = rospy.myargv()

@@ -31,6 +31,7 @@ ros_action(unpublish/1).
 ros_action(subscribe/2).
 ros_action(unsubscribe/1).
 ros_action(call_service/3).
+ros_action(call_service_async/4).
 ros_action(action_send/4).
 ros_action(action_abort/1).
 ros_action(action_wait/1).
@@ -53,12 +54,13 @@ ros_exog_action(memory_remove/2).
 ros_exog_action(memory_change/3).
 ros_exog_action(subprocess_output/3).
 ros_exog_action(subprocess_end/2).
+ros_exog_action(service_async_result/3).
 
 prim_action(A) :- functor(A,F,N), ros_action(F/N).
 poss(A, true) :- functor(A,F,N), ros_action(F/N).
 
 senses(memory_read(X),X).
-senses(call_service(N,_,_),N) :- prim_fluent(N).
+senses(call_service(SrvName,_,_),SrvName) :- prim_fluent(SrvName).
 senses(action_wait(G),F) :- F=action_result(G), prim_fluent(F).
 senses(action_status(G),F) :- F=action_status(G), prim_fluent(F).
 senses(action_status_simple(G),F) :- F=action_status_simple(G), prim_fluent(F).
@@ -71,6 +73,7 @@ causes_val(topic(N,V), N, V, true) :- prim_fluent(N).
 causes_val(memory_add(K,V,_), K, V, true) :- prim_fluent(K).
 causes_val(memory_change(K,V,_), K, V, true) :- prim_fluent(K).
 causes_val(memory_remove(K,_), K, nil, true) :- prim_fluent(K).
+causes_val(service_async_result(R,SrvName,_CallId), SrvName, R, true) :- prim_fluent(SrvName).
 
 proc(repeat(1, P), P) :- !.
 proc(repeat(NTimes, P), [P, repeat(NTimesMinusOne, P)]) :- NTimes > 1, succ(NTimesMinusOne, NTimes).

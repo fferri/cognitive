@@ -182,6 +182,23 @@ class EclipseProlog:
         resp = self.services[service_name](term2srv(service_data))
         return srv2term(resp)
 
+    def call_service_async_callback(self, result, service_name, call_id):
+        pass
+
+    def yield_callback_call_service_async_4(self, service_name, service_type, service_data, call_id):
+        service_name = str(service_name)
+        service_type = str(service_type)
+        call_id = str(call_id)
+        if not service_name in self.services:
+            service_class = roslib.message.get_service_class(service_type)
+            self.services[service_name] = rospy.ServiceProxy(service_name, service_class)
+        rospy.wait_for_service(service_name)
+        def call_service_async_thread():
+            resp = self.services[service_name](term2srv(service_data))
+            self.call_service_async_callback(resp, service_name, call_id)
+        threading.Thread(target=call_service_async_thread, args=()).start()
+        return pyclp.Var()
+
     def yield_callback_action_send_4(self, as_name, as_type, goal_id, data):
         as_name = str(as_name)
         as_type = str(as_type)
