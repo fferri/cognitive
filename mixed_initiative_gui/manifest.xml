@@ -1,0 +1,15 @@
+<package>
+  <description brief="mixed_initiative_gui">
+
+     mixed_initiative_gui
+
+  </description>
+  <author>Federico Ferri</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/mixed_initiative_gui</url>
+  <depend package="rospy"/>
+
+</package>
+
+

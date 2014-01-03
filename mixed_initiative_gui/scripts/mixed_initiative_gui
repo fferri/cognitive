@@ -1,0 +1,170 @@
+#!/usr/bin/env python
+
+import roslib; roslib.load_manifest('mixed_initiative_gui')
+import sys
+import time
+import rospy
+from PyQt4 import QtGui, QtCore
+from mixed_initiative_gui.srv import *
+from Queue import Queue
+
+ask_queue = Queue()
+
+class MessageEntry(QtGui.QFrame):
+    def __init__(self, wparent, queue, req):
+        super(MessageEntry, self).__init__()
+        self.wparent = wparent
+        self.queue = queue
+        self.req = req
+        self.initUI()
+        if self.req.timeout > 0:
+            self.req.timeout += 1
+            self.timeout_tick()
+        
+    def initUI(self):
+        self.setAutoFillBackground(True)
+        self.layout = QtGui.QVBoxLayout(self)
+
+        l = QtGui.QLabel(self.req.message, self)
+        l.setWordWrap(True)
+        l.setStyleSheet("QLabel {border: none;}")
+        self.layout.addWidget(l)
+
+        self.b = []
+        btns = QtGui.QHBoxLayout()
+        btns.addStretch()
+        i = 0
+        if len(self.req.buttons) == 0 and not self.req.text_input:
+            self.req.buttons.append('Dismiss')
+        for btnText in self.req.buttons:
+            self.makeButton(btns, btnText, i)
+            i += 1
+        self.layout.addLayout(btns)
+
+        if self.req.text_input:
+            txtin = QtGui.QHBoxLayout()
+            self.txt_field = QtGui.QLineEdit(self)
+            self.txt_send = QtGui.QPushButton('>>>', self)
+            txtin.addWidget(self.txt_field)
+            txtin.addWidget(self.txt_send)
+            self.txt_send.clicked.connect(self.sendtxt)
+            self.connect(self.txt_field, QtCore.SIGNAL('returnPressed()'), self.txt_send, QtCore.SLOT('click()'))
+            self.layout.addLayout(txtin)
+
+        self.setLayout(self.layout)
+
+        def getb(o,f): return min(1.0,max(0.0,getattr(o,f)))
+        def getcol(o,f): return int(255*(getb(o,f)*getb(o,'a')+0.867*(1-getb(o,'a'))))
+        color = 'rgb(%d,%d,%d)' % tuple(getcol(self.req.color,c) for c in ['r','g','b'])
+        self.setStyleSheet("QFrame {background-color: %s; margin: 1px; border: 1px solid #666;}" % color)
+
+    def timeout_tick(self):
+        if self.req.timeout > 0:
+            d = self.req.default_answer
+            self.req.timeout -= 1
+            self.b[d].setText('%s (-%d)' % (self.req.buttons[d], self.req.timeout))
+            if self.req.timeout == 0:
+                self.handler(self.req.buttons[d], d)
+
+    def makeButton(self, hbox, txt, i):
+        b = QtGui.QPushButton(txt, self)
+        if i == self.req.default_answer and self.req.timeout > 0:
+            f = b.font()
+            f.setBold(True)
+            b.setFont(f)
+        b.setAutoDefault(True)
+        self.setStyleSheet("font-weight: bold;")
+        b.clicked.connect(lambda: self.handler(txt, i))
+        hbox.addWidget(b)
+        self.b.append(b)
+
+    def sendtxt(self):
+        self.set_result(-1, str(self.txt_field.text()))
+        self.dismiss()
+
+    def handler(self, txt, i):
+        self.set_result(i, txt)
+        self.dismiss()
+
+    def dismiss(self):
+        self.wparent.remove_message(self.req.call_id)
+
+    def set_result(self, i, txt):
+        self.queue.put((self, i, txt))
+
+class MainWindow(QtGui.QWidget):
+    def __init__(self):
+        super(MainWindow, self).__init__()
+        self.entries = {}
+        self.initUI()
+        
+    def initUI(self):
+        self.layout0 = QtGui.QVBoxLayout(self)
+        self.scrollArea = QtGui.QScrollArea(self)
+        self.scrollArea.setWidgetResizable(True)
+        self.contents = QtGui.QWidget(self.scrollArea)
+        self.layout = QtGui.QVBoxLayout(self.contents)
+        self.scrollArea.setWidget(self.contents)
+        self.scrollArea.setStyleSheet("QScrollArea {border: none;}")
+        self.layout0.addWidget(self.scrollArea)
+        self.setGeometry(QtCore.QRect(0, 0, 380, 500))
+        self.setWindowTitle('Message UI')
+
+        self.layout.addStretch()
+
+        self.show()
+    
+    def timeout_tick(self):
+        for call_id, entry in self.entries.items():
+            entry.timeout_tick()
+
+    def add_message(self, queue, req):
+        if req.call_id in self.entries:
+            raise Exception('A question with id \'%s\' is already pending' % req.call_id)
+        self.entries[req.call_id] = MessageEntry(self, queue, req)
+        self.layout.addWidget(self.entries[req.call_id])
+
+    def remove_message(self, call_id):
+        if call_id not in self.entries:
+            raise Exception('Question with id \'%s\' does not exist' % call_id)
+        self.entries[call_id].setParent(None)
+        del self.entries[call_id]
+
+def ask_callback(req):
+    queue = Queue()
+    ask_queue.put(('ask', queue, req))
+    entry, i, txt = queue.get()
+    return QuestionResponse(call_id=entry.req.call_id, answer=i, text_input=txt)
+
+def unask_callback(req):
+    ask_queue.put(('unask', None, req.call_id))
+    return QuestionRefResponse()
+
+def main():
+    global w
+    app = QtGui.QApplication(rospy.myargv())
+    app.connect(app, QtCore.SIGNAL("lastWindowClosed()"), app, QtCore.SLOT("quit()"))
+    w = MainWindow()
+    rospy.init_node('question_server')
+    rospy.Service('ask', Question, ask_callback)
+    rospy.Service('unask', QuestionRef, unask_callback)
+    #sys.exit(app.exec_())
+    r = rospy.Rate(20)
+    last_tick = 0
+    while not rospy.is_shutdown():
+        t = time.time()
+        if t > (last_tick + 1):
+            w.timeout_tick()
+            last_tick = t
+        while not ask_queue.empty():
+            t, queue, req = ask_queue.get()
+            if t == 'ask':
+                w.add_message(queue, req)
+            elif t == 'unask':
+                w.entries[req].set_result(-2, 'Removed')
+                w.remove_message(req)
+        app.processEvents()
+        r.sleep()
+
+if __name__ == '__main__':
+    main()
