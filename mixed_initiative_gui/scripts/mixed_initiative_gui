@@ -133,8 +133,11 @@ class MainWindow(QtGui.QWidget):
 def ask_callback(req):
     queue = Queue()
     ask_queue.put(('ask', queue, req))
-    entry, i, txt = queue.get()
-    return QuestionResponse(call_id=entry.req.call_id, answer=i, text_input=txt)
+    x = queue.get()
+    if x:
+        return QuestionResponse(call_id=x[0].req.call_id, answer=x[1], text_input=x[2])
+    else:
+        return False
 
 def unask_callback(req):
     ask_queue.put(('unask', None, req.call_id))
@@ -159,10 +162,17 @@ def main():
         while not ask_queue.empty():
             t, queue, req = ask_queue.get()
             if t == 'ask':
-                w.add_message(queue, req)
+                try:
+                    w.add_message(queue, req)
+                except Exception as e:
+                    rospy.logerr(e)
+                    queue.put(None)
             elif t == 'unask':
-                w.entries[req].set_result(-2, 'Removed')
-                w.remove_message(req)
+                try:
+                    w.entries[req].set_result(-2, 'Removed')
+                    w.remove_message(req)
+                except Exception as e:
+                    rospy.logerr(e)
         app.processEvents()
         r.sleep()
 
