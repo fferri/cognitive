@@ -12,18 +12,30 @@
 :- multifile(exog_occurs/1).
 :- multifile(initially/2).
 :- ['/opt/indigolog/Interpreters/indigolog-vanilla'].
+:- multifile(indigolog_trace/1).
+
+indigolog_trace(exog) :- indigolog_trace(all).
+indigolog_trace(exec) :- indigolog_trace(all).
+indigolog_trace(sens) :- indigolog_trace(all).
 
 %for simulation:
 %execute(A,R) :- ask_execute(A,R).
 %exog_occurs(A) :- ask_exog_occurs(A).
 
 %for deploy:
-execute(A,R) :- functor(A,F,N), ros_action(F/N), yield(A,R).
+execute(A,R) :- functor(A,F,N), ros_action(F/N), print_exec(A), yield(A,R), print_sens(A,R).
 execute(A,_) :- member(A,[start_interrupts, stop_interrupts]).
-exog_occurs(A) :- yield(check_exog_occurs,A).%, print_exog(A).
+exog_occurs(A) :- yield(check_exog_occurs,A), print_exog(A).
 
 print_exog(none) :- !.
-print_exog(A) :- write('*** exog: '),writeln(A).
+print_exog(A) :- indigolog_trace(exog), !, write('*** exogenous: '), writeln(A).
+print_exog(_).
+
+print_exec(A) :- indigolog_trace(exec), !, write('*** execute: '), writeln(A).
+print_exec(_).
+
+print_sens(A,R) :- indigolog_trace(sens), senses(A,_), !, write('*** sensing result of '), write(A), write(': '), writeln(R).
+print_sens(_,_).
 
 ros_action(advertise/2).
 ros_action(publish/3).
@@ -74,6 +86,7 @@ causes_val(memory_add(K,V,_), K, V, true) :- prim_fluent(K).
 causes_val(memory_change(K,V,_), K, V, true) :- prim_fluent(K).
 causes_val(memory_remove(K,_), K, nil, true) :- prim_fluent(K).
 causes_val(service_async_result(R,SrvName,_CallId), SrvName, R, true) :- prim_fluent(SrvName).
+causes_val(subprocess_end(P,C), F, C, true) :- F=subprocess_exit_code(P), prim_fluent(F).
 
 proc(repeat(1, P), P) :- !.
 proc(repeat(NTimes, P), [P, repeat(NTimesMinusOne, P)]) :- NTimes > 1, succ(NTimesMinusOne, NTimes).
