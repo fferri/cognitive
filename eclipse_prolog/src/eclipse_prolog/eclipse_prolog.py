@@ -410,10 +410,7 @@ def term2msg(term):
 def srv2term(srv_resp):
     args = []
     for slot in srv_resp.__slots__:
-        slot_obj = getattr(srv_resp, slot)
-        if not type(slot_obj) in [float, int, str]:
-            slot_obj = msg2term(slot_obj)
-        args.append(pyclp.Compound(slot, slot_obj))
+        args.append(pyclp.Compound(slot, msg2term(getattr(srv_resp, slot))))
     return pyclp.Compound(srv_resp._type, pyclp.PList(args))
 
 def term2srv(term):
