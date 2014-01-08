@@ -92,7 +92,9 @@ class EclipseProlog:
     ## @brief This callback gets called when Eclipse execution interrupts
     ## due to a yield/1 or yield/2 call
     ##
-    ## @param x The argument to return as second argument of yield/2
+    ## @param x The argument passed as first argument of yield/2
+    ##
+    ## @return The second argument to yield/2
     def yield_callback(self, x):
         if type(x) == pyclp.Atom:
             return self.yield_callback_atom(x)
@@ -103,6 +105,11 @@ class EclipseProlog:
         rospy.logwarn('yield callback: unhandled type: %s' % type(x))
         return pyclp.Var()
 
+    ## @brief This is the yield callback specialized for atoms
+    ##
+    ## @param atom The atom argument passed as first argument of yield/2
+    ##
+    ## @return The second argument to yield/2
     def yield_callback_atom(self, atom):
         signature = 'yield_callback_%s_0' % atom
         if signature in dir(self):
@@ -111,6 +118,11 @@ class EclipseProlog:
         rospy.logwarn('yield callback: unhandled atom: %s' % atom)
         return pyclp.Var()
 
+    ## @brief This is the yield callback specialized for compound terms
+    ##
+    ## @param compound The compound argument passed as first argument of yield/2
+    ##
+    ## @return The second argument to yield/2
     def yield_callback_compound(self, compound):
         signature = 'yield_callback_%s_%d' % (compound.functor(), compound.arity())
         if signature in dir(self):
@@ -120,10 +132,16 @@ class EclipseProlog:
         rospy.logwarn('yield callback: unhandled term: %s' % compound)
         return pyclp.Var()
 
+    ## @brief This is the yield callback specialized for lists
+    ##
+    ## @param plist The list argument passed as first argument of yield/2
+    ##
+    ## @return The second argument to yield/2
     def yield_callback_list(self, plist):
         rospy.logwarn('yield callback: unhandled list: %s' % plist)
         return pyclp.Var()
 
+    ## @brief Yield callback for advertise(TopicName, TopicType)
     def yield_callback_advertise_2(self, topic_name, topic_type):
         topic_name = str(topic_name)
         topic_type = str(topic_type)
@@ -132,6 +150,9 @@ class EclipseProlog:
             self.publishers[topic_name] = rospy.Publisher(topic_name, topic_class)
         return pyclp.Var()
 
+    ## @brief Yield callback for publish(TopicName, TopicType, Data)
+    ## Data can be converted to a msg with term2msg()
+    ## @see term2msg()
     def yield_callback_publish_3(self, topic_name, topic_type, topic_data):
         topic_name = str(topic_name)
         topic_type = str(topic_type)
@@ -141,6 +162,7 @@ class EclipseProlog:
         self.publishers[topic_name].publish(term2msg(topic_data))
         return pyclp.Var()
 
+    ## @brief Yield callback for unpublish(TopicName)
     def yield_callback_unpublish_1(self, topic_name):
         topic_name = str(topic_name)
         if topic_name in self.publishers:
@@ -148,6 +170,7 @@ class EclipseProlog:
             del self.publishers[topic_name]
         return pyclp.Var()
 
+    ## @brief Yield callback for subscribe(TopicName, TopicType)
     def yield_callback_subscribe_2(self, topic_name, topic_type):
         topic_name = str(topic_name)
         topic_type = str(topic_type)
@@ -156,6 +179,7 @@ class EclipseProlog:
             self.subscribers[topic_name] = rospy.Subscriber(topic_name, topic_class, self.topic_callback, topic_name, 1)
         return pyclp.Var()
 
+    ## @brief Yield callback for unsubscribe(TopicName)
     def yield_callback_unsubscribe_1(self, topic_name):
         topic_name = str(topic_name)
         if topic_name in self.subscribers:
@@ -163,15 +187,18 @@ class EclipseProlog:
             del self.subscribers[topic_name]
         return pyclp.Var()
 
+    ## @brief Yield callback for get_topic(TopicName)
     def yield_callback_get_topic_1(self, topic_name):
         topic_name = str(topic_name)
         if topic_name in self.topic_cache:
             return msg2term(self.topic_cache[topic_name])
         return pyclp.Var()
 
+    ## @brief Default callback for every ROS topic
     def topic_callback(self, data, topic_name):
         self.topic_cache[topic_name] = data
 
+    ## @brief Yield callback for call_service(ServiceName, ServiceType, ServiceData)
     def yield_callback_call_service_3(self, service_name, service_type, service_data):
         service_name = str(service_name)
         service_type = str(service_type)
@@ -182,9 +209,11 @@ class EclipseProlog:
         resp = self.services[service_name](term2srv(service_data))
         return srv2term(resp)
 
+    ## @brief Callback for service result by call_service_async/4
     def call_service_async_callback(self, result, service_name, call_id):
         pass
 
+    ## @brief Yield callback for call_service_async(ServiceName, ServiceType, ServiceData, CallID)
     def yield_callback_call_service_async_4(self, service_name, service_type, service_data, call_id):
         service_name = str(service_name)
         service_type = str(service_type)
@@ -199,6 +228,7 @@ class EclipseProlog:
         threading.Thread(target=call_service_async_thread, args=()).start()
         return pyclp.Var()
 
+    ## @brief Yield callback for action_send(ActionServerName, ActionServerType, GoalID, Data)
     def yield_callback_action_send_4(self, as_name, as_type, goal_id, data):
         as_name = str(as_name)
         as_type = str(as_type)
@@ -225,6 +255,7 @@ class EclipseProlog:
 
         return pyclp.Atom(goal_id)
 
+    ## @brief Yield callback for action_abort(GoalID)
     def yield_callback_action_abort_1(self, goal_id):
         goal_id = str(goal_id)
         if goal_id in self.action_clients:
@@ -236,6 +267,7 @@ class EclipseProlog:
             rospy.logwarn('cannot abort unexistsnt goal id \'%s\'' % goal_id)
         return pyclp.Var()
 
+    ## @brief Yield callback for action_wait(GoalID)
     def yield_callback_action_wait_1(self, goal_id):
         goal_id = str(goal_id)
         if goal_id in self.action_clients:
@@ -253,6 +285,7 @@ class EclipseProlog:
             rospy.logwarn('cannot wait unexistent goal id \'%s\'' % goal_id)
             return pyclp.Var()
 
+    ## @brief Yield callback for action_status(GoalID)
     def yield_callback_action_status_1(self, goal_id):
         goal_id = str(goal_id)
         if goal_id in self.action_clients:
@@ -265,6 +298,7 @@ class EclipseProlog:
             rospy.logwarn('cannot get status of unexistent goal id \'%s\'' % goal_id)
             return pyclp.Var()
 
+    ## @brief Yield callback for action_status_simple(GoalID)
     def yield_callback_action_status_simple_1(self, goal_id):
         goal_id = str(goal_id)
         if goal_id in self.action_clients:
@@ -276,21 +310,6 @@ class EclipseProlog:
         else:
             rospy.logwarn('cannot get simple status of unexistent goal id \'%s\'' % goal_id)
             return pyclp.Var()
-
-    #def check_actions_end(self):
-        #finished = []
-
-        #for (goal_id, client) in self.action_clients.items():
-        #    if client.simple_state == actionlib.SimpleGoalState.DONE:
-        #        self.action_end_callback(goal_id)
-        #        client.wait_for_result()
-        #        result = client.get_result()
-        #        self.action_result_callback(goal_id, result)
-        #        finished.append(goal_id)
-
-        # purge:
-        #for goal_id in finished:
-        #    del self.action_clients[goal_id]
 
     ## @brief This callback gets called on transitions to done
     def action_done_callback(self, goal_id, state, result):
@@ -304,10 +323,12 @@ class EclipseProlog:
     def action_feedback_callback(self, goal_id, feedback):
         pass
 
+    ## @brief Yield callback for quaternion_from_euler(RPY)
     def yield_callback_quaternion_from_euler_1(self, rpy):
         q = tf.transformations.quaternion_from_euler(*list(float(x) for x in rpy))
         return pyclp.PList(list(pyclp.Term(x) for x in q))
 
+    ## @brief Yield callback for subprocess_open(ProcessID, Argv)
     def yield_callback_subprocess_open_2(self, process_id, args):
         process_id = str(process_id)
         if process_id in self.subprocesses and self.subprocesses[process_id].poll():
@@ -322,6 +343,8 @@ class EclipseProlog:
         rospy.logdebug('started process id \'%s\'' % process_id)
         return pyclp.Var()
 
+    ## @brief This thread reads subprocess' stdout line by line, and calls appropriate callbacks
+    ## @see subprocess_output_callback()
     def subprocess_reader_thread(self, process_id, channel_name):
         rospy.logdebug('reader_thread[%s:%s]: started' % (process_id, channel_name))
         for line in iter(getattr(self.subprocesses[process_id], channel_name).readline, ''):
@@ -330,6 +353,8 @@ class EclipseProlog:
             self.subprocess_output_callback(process_id, channel_name, line)
         rospy.logdebug('reader_thread[%s:%s]: finished' % (process_id, channel_name))
 
+    ## @brief This thread wait subprocess' exit code, and calls appropriate callback
+    ## @see subprocess_end_callback()
     def subprocess_wait_thread(self, process_id):
         rospy.logdebug('wait_thread[%s]: started' % (process_id,))
         exit_code = self.subprocesses[process_id].wait()
@@ -337,6 +362,7 @@ class EclipseProlog:
         #del self.subprocesses[process_id]
         rospy.logdebug('wait_thread[%s]: finished. exit code: %d' % (process_id, exit_code))
 
+    ## @brief Yield callback for subprocess_wait(ProcessID)
     def yield_callback_subprocess_wait_1(self, process_id):
         process_id = str(process_id)
         if process_id not in self.subprocesses:
@@ -348,6 +374,7 @@ class EclipseProlog:
         rospy.logdebug('got exit code %d from process id \'%s\'' % (exit_code, process_id))
         return pyclp.Term(exit_code)
 
+    ## @brief Yield callback for subprocess_kill(ProcessID)
     def yield_callback_subprocess_kill_1(self, process_id):
         process_id = str(process_id)
         if process_id in self.subprocesses:
@@ -360,9 +387,11 @@ class EclipseProlog:
             rospy.logwarn('cannot kill unexistent process id \'%s\'' % process_id)
             return pyclp.Var()
 
+    ## @brief This callback gets called whenever output from subprocesses is read
     def subprocess_output_callback(self, process_id, stream, line):
         pass
 
+    ## @brief This callback gets called whenever subprocess terminates
     def subprocess_end_callback(self, process_id, exit_code):
         pass
 
