@@ -25,10 +25,10 @@ class MessageEntry(QtGui.QFrame):
         self.setAutoFillBackground(True)
         self.layout = QtGui.QVBoxLayout(self)
 
-        l = QtGui.QLabel(self.req.message, self)
-        l.setWordWrap(True)
-        l.setStyleSheet("QLabel {border: none;}")
-        self.layout.addWidget(l)
+        self.label = QtGui.QLabel(self.req.message, self)
+        self.label.setWordWrap(True)
+        self.label.setStyleSheet("QLabel {border: none;}")
+        self.layout.addWidget(self.label)
 
         self.b = []
         btns = QtGui.QHBoxLayout()
@@ -92,6 +92,9 @@ class MessageEntry(QtGui.QFrame):
     def set_result(self, i, txt):
         self.queue.put((self, i, txt))
 
+    def set_text(self, txt):
+        self.label.setText(txt)
+
 class MainWindow(QtGui.QWidget):
     def __init__(self):
         super(MainWindow, self).__init__()
@@ -140,17 +143,23 @@ def ask_callback(req):
         return False
 
 def unask_callback(req):
-    ask_queue.put(('unask', None, req.call_id))
+    ask_queue.put(('unask', None, req))
     return QuestionRefResponse()
+
+def edit_callback(req):
+    ask_queue.put(('edit', None, req))
+    return QuestionEditResponse()
 
 def main():
     global w
     app = QtGui.QApplication(rospy.myargv())
     app.connect(app, QtCore.SIGNAL("lastWindowClosed()"), app, QtCore.SLOT("quit()"))
     w = MainWindow()
-    rospy.init_node('question_server')
-    rospy.Service('ask', Question, ask_callback)
-    rospy.Service('unask', QuestionRef, unask_callback)
+    node_name = 'mixed_initiative_gui'
+    rospy.init_node(node_name)
+    rospy.Service(node_name + '/add', Question, ask_callback)
+    rospy.Service(node_name + '/remove', QuestionRef, unask_callback)
+    rospy.Service(node_name + '/edit', QuestionEdit, edit_callback)
     #sys.exit(app.exec_())
     r = rospy.Rate(20)
     last_tick = 0
@@ -169,10 +178,12 @@ def main():
                     queue.put(None)
             elif t == 'unask':
                 try:
-                    w.entries[req].set_result(-2, 'Removed')
-                    w.remove_message(req)
+                    w.entries[req.call_id].set_result(-2, 'Removed')
+                    w.remove_message(req.call_id)
                 except Exception as e:
                     rospy.logerr(e)
+            elif t == 'edit':
+                w.entries[req.call_id].set_text(req.text)
         app.processEvents()
         r.sleep()
 
