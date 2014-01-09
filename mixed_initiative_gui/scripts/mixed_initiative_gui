@@ -140,7 +140,8 @@ def ask_callback(req):
     if x:
         return QuestionResponse(call_id=x[0].req.call_id, answer=x[1], text_input=x[2])
     else:
-        return False
+        rospy.logerr('The answer queue returned: %s' % x)
+        return QuestionResponse()
 
 def unask_callback(req):
     ask_queue.put(('unask', None, req))
