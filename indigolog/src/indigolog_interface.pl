@@ -18,6 +18,9 @@ indigolog_trace(exog) :- indigolog_trace(all).
 indigolog_trace(exec) :- indigolog_trace(all).
 indigolog_trace(sens) :- indigolog_trace(all).
 
+indigolog_skip_trace(sleep(_)).
+indigolog_skip_trace(say(_)).
+
 %for simulation:
 %execute(A,R) :- ask_execute(A,R).
 %exog_occurs(A) :- ask_exog_occurs(A).
@@ -25,13 +28,13 @@ indigolog_trace(sens) :- indigolog_trace(all).
 %for deploy:
 execute(A,R) :- functor(A,F,N), ros_action(F/N), print_exec(A), yield(A,R), print_sens(A,R).
 execute(A,_) :- member(A,[start_interrupts, stop_interrupts]).
-exog_occurs(A) :- yield(check_exog_occurs,A), print_exog(A).
+exog_occurs(A) :- yield(check_exog_occurs,A), A \= none, print_exog(A).
 
 print_exog(none) :- !.
 print_exog(A) :- indigolog_trace(exog), !, write('*** exogenous: '), writeln(A).
 print_exog(_).
 
-print_exec(A) :- indigolog_trace(exec), A \= sleep(_), !, write('*** execute: '), writeln(A).
+print_exec(A) :- indigolog_trace(exec), \+ indigolog_skip_trace(A), !, write('*** execute: '), writeln(A).
 print_exec(_).
 
 print_sens(A,R) :- indigolog_trace(sens), senses(A,_), !, write('*** sensing result of '), write(A), write(': '), writeln(R).
@@ -42,7 +45,7 @@ ros_action(publish/3).
 ros_action(unpublish/1).
 ros_action(subscribe/2).
 ros_action(unsubscribe/1).
-ros_action(call_service/3).
+ros_action(call_service/4).
 ros_action(call_service_async/4).
 ros_action(action_send/4).
 ros_action(action_abort/1).
@@ -72,7 +75,7 @@ prim_action(A) :- functor(A,F,N), ros_action(F/N).
 poss(A, true) :- functor(A,F,N), ros_action(F/N).
 
 senses(memory_read(X),X).
-senses(call_service(SrvName,_,_),SrvName) :- prim_fluent(SrvName).
+senses(call_service(SrvName,_,_,CallID),F) :- F=service(SrvName,CallID), prim_fluent(F).
 senses(action_wait(G),F) :- F=action_result(G), prim_fluent(F).
 senses(action_status(G),F) :- F=action_status(G), prim_fluent(F).
 senses(action_status_simple(G),F) :- F=action_status_simple(G), prim_fluent(F).
@@ -85,10 +88,14 @@ causes_val(topic(N,V), N, V, true) :- prim_fluent(N).
 causes_val(memory_add(K,V,_), K, V, true) :- prim_fluent(K).
 causes_val(memory_change(K,V,_), K, V, true) :- prim_fluent(K).
 causes_val(memory_remove(K,_), K, nil, true) :- prim_fluent(K).
-causes_val(service_async_result(R,SrvName,_CallId), SrvName, R, true) :- prim_fluent(SrvName).
+causes_val(service_async_result(R,SrvName,CallID), F, R, true) :- F=service(SrvName,CallID), writeln([cristo,dbg,F,R]), prim_fluent(F).
 causes_val(subprocess_end(P,C), F, C, true) :- F=subprocess_exit_code(P), prim_fluent(F).
 causes_val(subprocess_open(P,_), F, true, true) :- F=running(P), prim_fluent(F).
 causes_val(subprocess_end(P,_), F, false, true) :- F=running(P), prim_fluent(F).
+
+prim_action(service_clear_result(SrvName,CallID)).
+poss(service_clear_result(SrvName,CallID), true).
+causes_val(service_clear_result(SrvName,CallID), service(SrvName,CallID), nil, true).
 
 proc(repeat(1, P), P) :- !.
 proc(repeat(NTimes, P), [P, repeat(NTimesMinusOne, P)]) :- NTimes > 1, succ(NTimesMinusOne, NTimes).
