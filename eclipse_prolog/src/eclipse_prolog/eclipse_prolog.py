@@ -23,7 +23,6 @@ class EclipseProlog:
         self.publishers = {}
         self.subscribers = {}
         self.topic_cache = {}
-        self.services = {}
         self.action_clients = {}
         self.subprocesses = {}
 
@@ -198,16 +197,21 @@ class EclipseProlog:
     def topic_callback(self, data, topic_name):
         self.topic_cache[topic_name] = data
 
-    ## @brief Yield callback for call_service(ServiceName, ServiceType, ServiceData)
-    def yield_callback_call_service_3(self, service_name, service_type, service_data):
+    ## @brief Yield callback for call_service(ServiceName, ServiceType, ServiceData, CallID)
+    def yield_callback_call_service_4(self, service_name, service_type, service_data, call_id):
         service_name = str(service_name)
         service_type = str(service_type)
-        if not service_name in self.services:
-            service_class = roslib.message.get_service_class(service_type)
-            self.services[service_name] = rospy.ServiceProxy(service_name, service_class)
+        call_id = str(call_id)
+        service_class = roslib.message.get_service_class(service_type)
+        service_proxy = rospy.ServiceProxy(service_name, service_class)
+        rospy.logdebug('waiting for service %s (type: %s) to come up...' % (service_name, service_type))
         rospy.wait_for_service(service_name)
-        resp = self.services[service_name](term2srv(service_data))
-        return srv2term(resp)
+        rospy.logdebug('service %s (type: %s) is up' % (service_name, service_type))
+        rospy.logdebug('calling service %s (type: %s) with id %s and with data: %s' % (service_name, service_type, call_id, service_data))
+        resp = service_proxy(term2srv(service_data))
+        resp = srv2term(resp)
+        rospy.logdebug('service %s (type: %s) result for id %s: %s' % (service_name, service_type, call_id, resp))
+        return resp
 
     ## @brief Callback for service result by call_service_async/4
     def call_service_async_callback(self, result, service_name, call_id):
@@ -218,12 +222,16 @@ class EclipseProlog:
         service_name = str(service_name)
         service_type = str(service_type)
         call_id = str(call_id)
-        if not service_name in self.services:
-            service_class = roslib.message.get_service_class(service_type)
-            self.services[service_name] = rospy.ServiceProxy(service_name, service_class)
+        service_class = roslib.message.get_service_class(service_type)
+        service_proxy = rospy.ServiceProxy(service_name, service_class)
+        rospy.logdebug('waiting for service %s (type: %s) to come up...' % (service_name, service_type))
         rospy.wait_for_service(service_name)
+        rospy.logdebug('service %s (type: %s) is up' % (service_name, service_type))
+
         def call_service_async_thread():
-            resp = self.services[service_name](term2srv(service_data))
+            rospy.logdebug('calling service %s (type: %s) asynchronously with id %s and with data: %s' % (service_name, service_type, call_id, service_data))
+            resp = service_proxy(term2srv(service_data))
+            rospy.logdebug('service %s (type: %s) result for id %s: %s' % (service_name, service_type, call_id, srv2term(resp)))
             self.call_service_async_callback(resp, service_name, call_id)
         threading.Thread(target=call_service_async_thread, args=()).start()
         return pyclp.Var()
@@ -234,8 +242,6 @@ class EclipseProlog:
         as_type = str(as_type)
         goal_id = str(goal_id)
         rospy.logdebug('action_send(%s, %s, %s, %s)' % (as_name, as_type, goal_id, data))
-        #if goal_id in self.action_clients:
-        #    raise Exception('goal \'%s\' already pending', goal_id)
 
         rospy.logdebug('resolving actionlib message class \'%s\'' % as_type)
         as_class = roslib.message.get_message_class(as_type + 'Action')
