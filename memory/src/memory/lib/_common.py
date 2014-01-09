@@ -47,16 +47,22 @@ def TermCompound(functor, *args):
         toks += arg.tokens
     return Term(tokens=[TokenFunctor(functor, len(args))] + toks)
 
-def pyclpterm2tokenlist(t):
+def pyclpterm2termmsg(t):
+    return Term(tokens=pyclpterm2tokenmsglist(t))
+
+def termmsg2pyclpterm(m):
+    return tokenmsglist2pyclpterm(m.tokens)
+
+def pyclpterm2tokenmsglist(t):
     if type(t) == pyclp.PList:
         ret = [Token(tokenType=Token.TYPE_LIST, intData=len(t))]
         for arg in t:
-            ret += pyclpterm2tokenlist(arg)
+            ret += pyclpterm2tokenmsglist(arg)
         return ret
     elif type(t) == pyclp.Compound:
         ret = [Token(tokenType=Token.TYPE_FUNCTOR, stringData=t.functor(), intData=t.arity())]
         for arg in t.arguments():
-            ret += pyclpterm2tokenlist(arg)
+            ret += pyclpterm2tokenmsglist(arg)
         return ret
     elif type(t) == pyclp.Atom:
         try:
@@ -66,44 +72,52 @@ def pyclpterm2tokenlist(t):
                 return [Token(tokenType=Token.TYPE_FLOAT, floatData=float(t))]
             except:
                 return [Token(tokenType=Token.TYPE_STRING, stringData=str(t))]
+    elif type(t) == int:
+        return [Token(tokenType=Token.TYPE_INT, intData=t)]
+    elif type(t) == float:
+        return [Token(tokenType=Token.TYPE_FLOAT, floatData=t)]
+    elif type(t) == str:
+        return [Token(tokenType=Token.TYPE_STRING, stringData=t)]
 
-def tokenlist2pyclpterm(l):
-    term, rest = tokenlist2pyclptermRec(l)
+def tokenmsglist2pyclpterm(l):
+    term, rest = tokenmsglist2pyclptermRec(l)
     if rest == []:
         return term
     else:
         raise Exception('Malformed token list')
 
-def tokenlist2pyclptermRec(l):
+def tokenmsglist2pyclptermRec(l):
     head = l[0]
     l = l[1:]
     if head.tokenType == Token.TYPE_LIST:
         tlist = []
         for i in range(head.intData):
-            term, l = tokenlist2pyclptermRec(l)
+            term, l = tokenmsglist2pyclptermRec(l)
             tlist.append(term)
         return (pyclp.PList(tlist), l)
     elif head.tokenType == Token.TYPE_FUNCTOR:
         args = []
         for i in range(head.intData):
-            term, l = tokenlist2pyclptermRec(l)
+            term, l = tokenmsglist2pyclptermRec(l)
             args.append(term)
         return (pyclp.Compound(head.stringData, *args), l)
     elif head.tokenType == Token.TYPE_INT:
-        return (pyclp.Term(head.intData), l)
+        #return (pyclp.Term(head.intData), l)
+        return (head.intData, l)
     elif head.tokenType == Token.TYPE_FLOAT:
-        return (pyclp.Term(head.floatData), l)
+        #return (pyclp.Term(head.floatData), l)
+        return (head.floatData, l)
     elif head.tokenType == Token.TYPE_STRING:
         return (pyclp.Atom(head.stringData), l)
 
-def token2str(tok):
+def tokenmsg2str(tok):
     if tok.tokenType == Token.TYPE_INT: return str(tok.intData)
     elif tok.tokenType == Token.TYPE_FLOAT: return str(tok.floatData)
     elif tok.tokenType == Token.TYPE_STRING: return tok.stringData
     elif tok.tokenType == Token.TYPE_FUNCTOR: return ':%s/%d' % (tok.stringData, tok.intData)
     elif tok.tokenType == Token.TYPE_LIST: return ':%d' % tok.intData
 
-def str2token(s):
+def str2tokenmsg(s):
     m = re.match(r'^:(\d+)$', s)
     if m: return Token(tokenType=Token.TYPE_LIST, intData=int(m.group(1)))
     m = re.match(r'^:(.*)/(\d+)$', s)
@@ -116,22 +130,22 @@ def str2token(s):
         except:
             return Token(tokenType=Token.TYPE_STRING, stringData=str(s))
 
-def tokenlist2str(l):
-    return ' '.join(list(token2str(tok) for tok in l))
+def tokenmsglist2str(l):
+    return ' '.join(list(tokenmsg2str(tok) for tok in l))
 
-def tokenlist2strPrettyRec(l):
+def tokenmsglist2strPrettyRec(l):
     head = l[0]
     l = l[1:]
     if head.tokenType == Token.TYPE_LIST:
         tlist = []
         for i in range(head.intData):
-            term, l = tokenlist2strPrettyRec(l)
+            term, l = tokenmsglist2strPrettyRec(l)
             tlist.append(term)
         return ('[%s]' % ', '.join(tlist), l)
     elif head.tokenType == Token.TYPE_FUNCTOR:
         args = []
         for i in range(head.intData):
-            term, l = tokenlist2strPrettyRec(l)
+            term, l = tokenmsglist2strPrettyRec(l)
             args.append(term)
         return ('%s(%s)' % (head.stringData, ', '.join(args)), l)
     elif head.tokenType == Token.TYPE_INT:
@@ -141,8 +155,8 @@ def tokenlist2strPrettyRec(l):
     elif head.tokenType == Token.TYPE_STRING:
         return ('\'%s\'' % head.stringData, l)
 
-def term2str(term):
-    return tokenlist2strPrettyRec(term.tokens)[0]
+def termmsg2str(term):
+    return tokenmsglist2strPrettyRec(term.tokens)[0]
 
 def get_terminal_size():
     import os
@@ -192,6 +206,6 @@ def print_terms_table(entries):
             term = entry
             term_id = '?'
             src = 'N/A'
-        print fmt % (term_id, term2str(term), src)    
+        print fmt % (term_id, termmsg2str(term), src)
     print hline
 
