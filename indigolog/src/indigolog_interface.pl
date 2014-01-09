@@ -31,7 +31,7 @@ print_exog(none) :- !.
 print_exog(A) :- indigolog_trace(exog), !, write('*** exogenous: '), writeln(A).
 print_exog(_).
 
-print_exec(A) :- indigolog_trace(exec), !, write('*** execute: '), writeln(A).
+print_exec(A) :- indigolog_trace(exec), A \= sleep(_), !, write('*** execute: '), writeln(A).
 print_exec(_).
 
 print_sens(A,R) :- indigolog_trace(sens), senses(A,_), !, write('*** sensing result of '), write(A), write(': '), writeln(R).
@@ -87,6 +87,8 @@ causes_val(memory_change(K,V,_), K, V, true) :- prim_fluent(K).
 causes_val(memory_remove(K,_), K, nil, true) :- prim_fluent(K).
 causes_val(service_async_result(R,SrvName,_CallId), SrvName, R, true) :- prim_fluent(SrvName).
 causes_val(subprocess_end(P,C), F, C, true) :- F=subprocess_exit_code(P), prim_fluent(F).
+causes_val(subprocess_open(P,_), F, true, true) :- F=running(P), prim_fluent(F).
+causes_val(subprocess_end(P,_), F, false, true) :- F=running(P), prim_fluent(F).
 
 proc(repeat(1, P), P) :- !.
 proc(repeat(NTimes, P), [P, repeat(NTimesMinusOne, P)]) :- NTimes > 1, succ(NTimesMinusOne, NTimes).
