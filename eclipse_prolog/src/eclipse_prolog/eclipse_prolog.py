@@ -425,6 +425,8 @@ def term2msg(term):
                 return float(term)
             except:
                 return str(term)
+    if type(term) == tuple and term == ():
+        return []
     if term.functor() == 'time':
         time_arg = term.arguments().next()
         return rospy.Time.now() if str(time_arg) == 'now' else genpy.rostime.Time(float(time_arg))
