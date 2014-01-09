@@ -1,0 +1,9 @@
+float32 floatData
+int32 intData
+string stringData
+uint8 tokenType
+uint8 TYPE_STRING=1
+uint8 TYPE_FLOAT=2
+uint8 TYPE_INT=3
+uint8 TYPE_FUNCTOR=4
+uint8 TYPE_LIST=5

@@ -27,9 +27,6 @@ class MemoryStore:
         return self.mem[term_id]
 
     def write(self, term_id, term, src=''):
-        if not term_is_ground(term):
-            raise Exception('Cannot add unground term %s' % term_to_string(term))
-
         meta = TermMetadata()
         if not term_id:
             term_id = '_%d' % self.seq

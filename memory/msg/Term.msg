@@ -1,2 +1,1 @@
-string functor
-memory/Atom[] args
+memory/Token[] tokens

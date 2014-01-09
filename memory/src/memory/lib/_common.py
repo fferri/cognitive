@@ -5,145 +5,144 @@ import sys
 import thread
 import re
 import rospy
+import pyclp
 
 from std_msgs.msg import *
 from memory.msg import *
 from memory.srv import *
 
-def AtomNull():
-    return Atom(intData=[], floatData=[], stringData=[])
+def TokenInt(i):
+    return Token(tokenType=Token.TYPE_INT, intData=int(i))
 
-def AtomInt(i):
-    return Atom(intData=[i], floatData=[], stringData=[])
+def TokenFloat(f):
+    return Token(tokenType=Token.TYPE_FLOAT, floatData=float(f))
 
-def AtomFloat(f):
-    return Atom(intData=[], floatData=[f], stringData=[])
+def TokenString(s):
+    return Token(tokenType=Token.TYPE_STRING, stringData=str(s))
 
-def AtomString(s):
-    return Atom(intData=[], floatData=[], stringData=[s])
+def TokenList(length):
+    return Token(tokenType=Token.TYPE_LIST, intData=int(length))
 
-def atom_check(a):
-    if type(a) != Atom:
-        raise TypeError("atom_check: type of a is %s" % type(a))
-    if type(a.intData) not in [list,tuple]:
-        raise TypeError("atom_check: type of a.intData is %s (value: %s)" % (type(a.intData), a.intData))
-    if type(a.floatData) not in [list,tuple]:
-        raise TypeError("atom_check: type of a.floatData is %s (value: %s)" % (type(a.floatData), a.floatData))
-    if type(a.stringData) not in [list,tuple]:
-        raise TypeError("atom_check: type of a.stringData is %s (value: %s)" % (type(a.stringData), a.stringData))
-    if len(a.intData) not in [0,1]:
-        raise TypeError("atom_check: length of a.intData is %s (value: %s)" % (len(a.intData), a.intData))
-    if len(a.floatData) not in [0,1]:
-        raise TypeError("atom_check: length of a.floatData is %s (value: %s)" % (len(a.floatData), a.floatData))
-    if len(a.stringData) not in [0,1]:
-        raise TypeError("atom_check: length of a.stringData is %s (value: %s)" % (len(a.stringData), a.stringData))
-    t = len(a.intData) + len(a.floatData) + len(a.stringData)
-    if t > 1:
-        raise TypeError("atom_check: at most one of intData floatData stringData must have one element (total: %d)" % t)
+def TokenFunctor(functor, arity):
+    return Token(tokenType=Token.TYPE_FUNCTOR, intData=int(arity), stringData=str(functor))
 
-def atom_is_null(a):
-    return len(a.intData) == 0 and len(a.floatData) == 0 and len(a.stringData) == 0
+def TermInt(i):
+    return [TokenInt(i)]
 
-def atom_is_int(a):
-    return len(a.intData) > 0
+def TermFloat(f):
+    return [TokenFloat(f)]
 
-def atom_is_float(a):
-    return len(a.floatData) > 0
+def TermString(s):
+    return [TokenString(s)]
 
-def atom_is_string(a):
-    return len(a.stringData) > 0
+def TermList(*args):
+    toks = []
+    for arg in args:
+        toks += arg.tokens
+    return [TokenList(len(args))] + toks
 
-def atom_get_int(a):
-    return a.intData[0]
+def TermCompound(functor, *args):
+    toks = []
+    for arg in args:
+        toks += arg.tokens
+    return [TokenFunctor(functor, len(args))] + toks
 
-def atom_get_float(a):
-    return a.floatData[0]
-
-def atom_get_string(a):
-    return a.stringData[0]
-
-def atom_get(a):
-    if atom_is_int(a): return atom_get_int(a)
-    if atom_is_float(a): return atom_get_float(a)
-    if atom_is_string(a): return atom_get_string(a)
-    return None
-
-def atom_equals(a1,a2):
-    atom_check(a1)
-    atom_check(a2)
-    if atom_is_null(a1) or atom_is_null(a2):
-        return True
-    if len(a1.intData) != len(a2.intData) or len(a1.floatData) != len(a2.floatData) or len(a1.stringData) != len(a2.stringData):
-        return False
-    for (i,n) in enumerate(a1.intData):
-        if a2.intData[i] != n: return False
-    for (i,f) in enumerate(a1.floatData):
-        if a2.floatData[i] != f: return False
-    for (i,s) in enumerate(a1.stringData):
-        if a2.stringData[i] != s: return False
-    return True
-
-def atom_parse(anything):
-    if type(anything) == int:
-        return AtomInt(anything)
-    elif type(anything) == float:
-        return AtomFloat(anything)
-    elif type(anything) == str:
-        if anything == '_':
-            return AtomNull()
+def pyclpterm2tokenlist(t):
+    if type(t) == pyclp.PList:
+        ret = [Token(tokenType=Token.TYPE_LIST, intData=len(t))]
+        for arg in t:
+            ret += pyclpterm2tokenlist(arg)
+        return ret
+    elif type(t) == pyclp.Compound:
+        ret = [Token(tokenType=Token.TYPE_FUNCTOR, stringData=t.functor(), intData=t.arity())]
+        for arg in t.arguments():
+            ret += pyclpterm2tokenlist(arg)
+        return ret
+    elif type(t) == pyclp.Atom:
         try:
-            return AtomInt(int(anything))
+            return [Token(tokenType=Token.TYPE_INT, intData=int(t))]
         except:
             try:
-                return AtomFloat(float(anything))
+                return [Token(tokenType=Token.TYPE_FLOAT, floatData=float(t))]
             except:
-                return AtomString(anything)
+                return [Token(tokenType=Token.TYPE_STRING, stringData=str(t))]
+
+def tokenlist2pyclpterm(l):
+    term, rest = tokenlist2pyclptermRec(l)
+    if rest == []:
+        return term
     else:
-        raise Exception('cannot make an atom from a %s' % type(anything))
+        raise Exception('Malformed token list')
 
-def atom_to_string(a):
-    atom_check(a)
-    if len(a.intData) == 1:
-        return str(a.intData[0])
-    if len(a.floatData) == 1:
-        return str(a.floatData[0])
-    if len(a.stringData) == 1:
-        return a.stringData[0]
-    return None
+def tokenlist2pyclptermRec(l):
+    head = l[0]
+    l = l[1:]
+    if head.tokenType == Token.TYPE_LIST:
+        tlist = []
+        for i in range(head.intData):
+            term, l = tokenlist2pyclptermRec(l)
+            tlist.append(term)
+        return (pyclp.PList(tlist), l)
+    elif head.tokenType == Token.TYPE_FUNCTOR:
+        args = []
+        for i in range(head.intData):
+            term, l = tokenlist2pyclptermRec(l)
+            args.append(term)
+        return (pyclp.Compound(head.stringData, *args), l)
+    elif head.tokenType == Token.TYPE_INT:
+        return (pyclp.Term(head.intData), l)
+    elif head.tokenType == Token.TYPE_FLOAT:
+        return (pyclp.Term(head.floatData), l)
+    elif head.tokenType == Token.TYPE_STRING:
+        return (pyclp.Atom(head.stringData), l)
 
-def TermX(f, *a):
-    return Term(functor=f, args=a)
+def token2str(tok):
+    if tok.tokenType == Token.TYPE_INT: return str(tok.intData)
+    elif tok.tokenType == Token.TYPE_FLOAT: return str(tok.floatData)
+    elif tok.tokenType == Token.TYPE_STRING: return tok.stringData
+    elif tok.tokenType == Token.TYPE_FUNCTOR: return ':%s/%d' % (tok.stringData, tok.intData)
+    elif tok.tokenType == Token.TYPE_LIST: return ':%d' % tok.intData
 
-def term_parse(str_list):
-    functor = str_list[0]
-    args = []
-    for arg in str_list[1:]:
-        args.append(atom_parse(arg))
-    return Term(functor=functor, args=args)
+def str2token(s):
+    m = re.match(r'^:(\d+)$', s)
+    if m: return Token(tokenType=Token.TYPE_LIST, intData=int(m.group(1)))
+    m = re.match(r'^:(.*)/(\d+)$', s)
+    if m: return Token(tokenType=Token.TYPE_FUNCTOR, intData=int(m.group(2)), stringData=m.group(1))
+    try:
+        return Token(tokenType=Token.TYPE_INT, intData=int(s))
+    except:
+        try:
+            return Token(tokenType=Token.TYPE_FLOAT, floatData=float(s))
+        except:
+            return Token(tokenType=Token.TYPE_STRING, stringData=str(s))
 
-def term_to_string(t):
-    if type(t) != Term:
-        print "term_to_string: WTF? (%s, type=%s)" % (t, type(t))
-    if len(t.args) > 0:
-        return "%s(%s)" % (t.functor, ", ".join(atom_to_string(a) for a in t.args))
-    else:
-        return t.functor
+def tokenlist2str(l):
+    return ' '.join(list(token2str(tok) for tok in l))
 
-def term_equals(t1,t2):
-    if t1.functor != t2.functor: return False
-    if len(t1.args) != len(t2.args): return False
-    for i in range(0,len(t1.args)):
-        if not atom_equals(t1.args[i],t2.args[i]):
-            return False
-    return True
+def tokenlist2strPrettyRec(l):
+    head = l[0]
+    l = l[1:]
+    if head.tokenType == Token.TYPE_LIST:
+        tlist = []
+        for i in range(head.intData):
+            term, l = tokenlist2strPrettyRec(l)
+            tlist.append(term)
+        return ('[%s]' % ', '.join(tlist), l)
+    elif head.tokenType == Token.TYPE_FUNCTOR:
+        args = []
+        for i in range(head.intData):
+            term, l = tokenlist2strPrettyRec(l)
+            args.append(term)
+        return ('%s(%s)' % (head.stringData, ', '.join(args)), l)
+    elif head.tokenType == Token.TYPE_INT:
+        return (str(head.intData), l)
+    elif head.tokenType == Token.TYPE_FLOAT:
+        return (str(head.floatData), l)
+    elif head.tokenType == Token.TYPE_STRING:
+        return ('\'%s\'' % head.stringData, l)
 
-def term_is_ground(t):
-    #if t.functor == '':
-    #    return False
-    for arg in t.args:
-        if atom_is_null(arg):
-            return False
-    return True
+def term2str(term):
+    return tokenlist2strPrettyRec(term.tokens)[0]
 
 def get_terminal_size():
     import os
@@ -193,6 +192,6 @@ def print_terms_table(entries):
             term = entry
             term_id = '?'
             src = 'N/A'
-        print fmt % (term_id, term_to_string(term), src)    
+        print fmt % (term_id, term2str(term), src)    
     print hline
 

@@ -9,26 +9,20 @@ from ._MemoryClient import *
 from ._MemoryStore import *
 
 class MemoryTopicMapper:
-    def __init__(self, topic_name, topic_class, term_id, term_name, term_args, timeout=0, src=rospy.get_name(), ns='/memory'):
+    def __init__(self, topic_name, topic_class, term_id, expr, timeout=0, src=rospy.get_name(), ns='/memory'):
         self.client = MemoryClient(src=src, ns=ns)
         self.ns = ns
         self.last_pub_time = 0
         self.term_id = term_id
         self.last_term = None
         self.timeout = timeout * 0.001
-        self.term_name = term_name
-        self.term_args = term_args
+        self.expr = expr
         self.client.remove(self.term_id)
         rospy.Subscriber(topic_name, topic_class, self.callback, queue_size=1)
 
     def callback(self, m):
         self.last_pub_time = time.time()
-
-        t = Term()
-        t.functor = self.term_name
-        for term_arg in self.term_args:
-            t.args.append(atom_parse(eval(term_arg)))
-        
+        t = eval(self.expr)
         self.client.write(self.term_id, t)
 
     def on_timeout(self):

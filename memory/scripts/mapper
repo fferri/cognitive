@@ -13,21 +13,16 @@ def mapper():
     namespace = rospy.get_param('~memory_namespace', '/memory')
     topic_name = rospy.get_param('~topic_name')
     topic_type = rospy.get_param('~topic_type')
-    term_id = rospy.get_param('~term/id')
-    term_functor = rospy.get_param('~term/functor')
+    term_id = rospy.get_param('~term_id')
+    expr = rospy.get_param('~expr')
     timeout = int(rospy.get_param('~timeout', '0'))
-    term_args_expr = []
-    i = 0
-    while rospy.has_param('~term/args/%d' % i):
-        term_args_expr.append(rospy.get_param('~term/args/%d' % i))
-        i += 1
 
     topic_class = roslib.message.get_message_class(topic_type)
     if not topic_class:
         print('Message %s not found. (are messages built?)' % topic_type)
         return
 
-    mm = MemoryTopicMapper(topic_name, topic_class, term_id, term_functor, term_args_expr, timeout=timeout, ns=namespace, src=rospy.get_name())
+    mm = MemoryTopicMapper(topic_name, topic_class, term_id, expr, timeout=timeout, ns=namespace, src=rospy.get_name())
 
     rospy.on_shutdown(mm.on_shutdown)
 

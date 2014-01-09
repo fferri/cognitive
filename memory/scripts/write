@@ -12,5 +12,5 @@ if __name__ == "__main__":
     c = MemoryClient('cmdline', ns=rospy.get_param('~memory_namespace', '/memory'))
     argv = rospy.myargv()
     term_id = argv[1]
-    term = term_parse(argv[2:])
+    term = Term(tokens=list(str2token(s) for s in sys.argv[2:]))
     c.write(term_id, term)
