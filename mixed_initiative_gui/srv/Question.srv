@@ -1,4 +1,4 @@
-string call_id
+string message_id
 string message
 string[] buttons
 int8 default_answer
@@ -6,6 +6,6 @@ uint32 timeout
 std_msgs/ColorRGBA color
 bool text_input
 ---
-string call_id
+string message_id
 int8 answer
 string text_input

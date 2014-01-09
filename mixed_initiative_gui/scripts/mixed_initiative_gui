@@ -87,7 +87,7 @@ class MessageEntry(QtGui.QFrame):
         self.dismiss()
 
     def dismiss(self):
-        self.wparent.remove_message(self.req.call_id)
+        self.wparent.remove_message(self.req.message_id)
 
     def set_result(self, i, txt):
         self.queue.put((self, i, txt))
@@ -118,27 +118,27 @@ class MainWindow(QtGui.QWidget):
         self.show()
     
     def timeout_tick(self):
-        for call_id, entry in self.entries.items():
+        for message_id, entry in self.entries.items():
             entry.timeout_tick()
 
     def add_message(self, queue, req):
-        if req.call_id in self.entries:
-            raise Exception('A question with id \'%s\' is already pending' % req.call_id)
-        self.entries[req.call_id] = MessageEntry(self, queue, req)
-        self.layout.addWidget(self.entries[req.call_id])
+        if req.message_id in self.entries:
+            raise Exception('A question with id \'%s\' is already pending' % req.message_id)
+        self.entries[req.message_id] = MessageEntry(self, queue, req)
+        self.layout.addWidget(self.entries[req.message_id])
 
-    def remove_message(self, call_id):
-        if call_id not in self.entries:
-            raise Exception('Question with id \'%s\' does not exist' % call_id)
-        self.entries[call_id].setParent(None)
-        del self.entries[call_id]
+    def remove_message(self, message_id):
+        if message_id not in self.entries:
+            raise Exception('Question with id \'%s\' does not exist' % message_id)
+        self.entries[message_id].setParent(None)
+        del self.entries[message_id]
 
 def ask_callback(req):
     queue = Queue()
     ask_queue.put(('ask', queue, req))
     x = queue.get()
     if x:
-        return QuestionResponse(call_id=x[0].req.call_id, answer=x[1], text_input=x[2])
+        return QuestionResponse(message_id=x[0].req.message_id, answer=x[1], text_input=x[2])
     else:
         rospy.logerr('The answer queue returned: %s' % x)
         return QuestionResponse()
@@ -179,12 +179,12 @@ def main():
                     queue.put(None)
             elif t == 'unask':
                 try:
-                    w.entries[req.call_id].set_result(-2, 'Removed')
-                    w.remove_message(req.call_id)
+                    w.entries[req.message_id].set_result(-2, 'Removed')
+                    w.remove_message(req.message_id)
                 except Exception as e:
                     rospy.logerr(e)
             elif t == 'edit':
-                w.entries[req.call_id].set_text(req.text)
+                w.entries[req.message_id].set_text(req.text)
         app.processEvents()
         r.sleep()
 
