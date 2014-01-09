@@ -27,25 +27,25 @@ def TokenFunctor(functor, arity):
     return Token(tokenType=Token.TYPE_FUNCTOR, intData=int(arity), stringData=str(functor))
 
 def TermInt(i):
-    return [TokenInt(i)]
+    return Term(tokens=[TokenInt(i)])
 
 def TermFloat(f):
-    return [TokenFloat(f)]
+    return Term(tokens=[TokenFloat(f)])
 
 def TermString(s):
-    return [TokenString(s)]
+    return Term(tokens=[TokenString(s)])
 
 def TermList(*args):
     toks = []
     for arg in args:
         toks += arg.tokens
-    return [TokenList(len(args))] + toks
+    return Term(tokens=[TokenList(len(args))] + toks)
 
 def TermCompound(functor, *args):
     toks = []
     for arg in args:
         toks += arg.tokens
-    return [TokenFunctor(functor, len(args))] + toks
+    return Term(tokens=[TokenFunctor(functor, len(args))] + toks)
 
 def pyclpterm2tokenlist(t):
     if type(t) == pyclp.PList:
