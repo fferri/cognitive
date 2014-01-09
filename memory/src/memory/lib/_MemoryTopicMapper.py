@@ -29,7 +29,7 @@ class MemoryTopicMapper:
         try:
             self.client.remove(self.term_id)
         except rospy.service.ServiceException:
-            rospy.logwarn('Failed to delete old term with id %d' % self.term_id)
+            rospy.logwarn('Failed to delete old term with id %s' % self.term_id)
 
     def spin(self):
         if self.timeout > 0:
