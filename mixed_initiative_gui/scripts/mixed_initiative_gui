@@ -8,6 +8,8 @@ from PyQt4 import QtGui, QtCore
 from mixed_initiative_gui.srv import *
 from Queue import Queue
 
+seq_id = 0
+
 ask_queue = Queue()
 
 class MessageEntry(QtGui.QFrame):
@@ -133,8 +135,15 @@ class MainWindow(QtGui.QWidget):
         self.entries[message_id].setParent(None)
         del self.entries[message_id]
 
+def seq_id():
+    global seq_id
+    seq_id += 1
+    return 'msg%d' % seq_id
+
 def ask_callback(req):
     queue = Queue()
+    if req.message_id == '':
+        req.message_id = seq_id()
     ask_queue.put(('ask', queue, req))
     x = queue.get()
     if x:
