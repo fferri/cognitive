@@ -193,7 +193,10 @@ def main():
                 except Exception as e:
                     rospy.logerr(e)
             elif t == 'edit':
-                w.entries[req.message_id].set_text(req.text)
+                if req.message_id in w.entries:
+                    w.entries[req.message_id].set_text(req.text)
+                else:
+                    rospy.logerr('Message with id \'%s\' does not exist' % req.message_id)
         app.processEvents()
         r.sleep()
 
