@@ -1,0 +1,65 @@
+<launch>
+  <node name="mapper_battery_status" pkg="memory" type="mapper">
+    <param name="topic_name" type="string" value="/robot_status"/>
+    <param name="topic_type" type="string" value="nifti_robot_driver_msgs/RobotStatusStamped"/>
+    <param name="timeout" type="int" value="4000"/>
+    <param name="term_id" type="string" value="battery_status"/>
+    <param name="expr" type="string" value="TermString(m.battery_status)"/>
+  </node>
+
+  <node name="mapper_battery_level" pkg="memory" type="mapper">
+    <param name="topic_name" type="string" value="/robot_status"/>
+    <param name="topic_type" type="string" value="nifti_robot_driver_msgs/RobotStatusStamped"/>
+    <param name="timeout" type="int" value="4000"/>
+    <param name="term_id" type="string" value="battery_level"/>
+    <param name="expr" type="string" value="TermFloat(m.battery_level)"/>
+  </node>
+
+  <node name="mapper_emergency_stop" pkg="memory" type="mapper">
+    <param name="topic_name" type="string" value="/robot_status"/>
+    <param name="topic_type" type="string" value="nifti_robot_driver_msgs/RobotStatusStamped"/>
+    <param name="timeout" type="int" value="4000"/>
+    <param name="term_id" type="string" value="emergency_stop"/>
+    <param name="expr" type="string" value="TermInt(1 if m.emergency_stop_on == True else 0)"/>
+  </node>
+
+  <node name="mapper_temperature" pkg="memory" type="mapper">
+    <param name="topic_name" type="string" value="/temperature"/>
+    <param name="topic_type" type="string" value="std_msgs/Float32"/>
+    <param name="timeout" type="int" value="4000"/>
+    <param name="term_id" type="string" value="temperature"/>
+    <param name="expr" type="string" value="TermFloat(m.data)"/>
+  </node>
+
+  <node name="mapper_brake" pkg="memory" type="mapper">
+    <param name="topic_name" type="string" value="/robot_status"/>
+    <param name="topic_type" type="string" value="nifti_robot_driver_msgs/RobotStatusStamped"/>
+    <param name="timeout" type="int" value="4000"/>
+    <param name="term_id" type="string" value="brake"/>
+    <param name="expr" type="string" value="TermInt(1 if m.brake_on == True else 0)"/>
+  </node>
+
+  <node name="mapper_accelerometer" pkg="memory" type="mapper">
+    <param name="topic_name" type="string" value="/velocity"/>
+    <param name="topic_type" type="string" value="geometry_msgs/TwistStamped"/>
+    <param name="timeout" type="int" value="4000"/>
+    <param name="term_id" type="string" value="accelerometer"/>
+    <param name="expr" type="string" value="TermList(TermFloat(m.twist.linear.x), TermFloat(m.twist.linear.y), TermFloat(m.twist.linear.z))"/>
+  </node>
+
+  <node name="mapper_gyroscope" pkg="memory" type="mapper">
+    <param name="topic_name" type="string" value="/velocity"/>
+    <param name="topic_type" type="string" value="geometry_msgs/TwistStamped"/>
+    <param name="timeout" type="int" value="4000"/>
+    <param name="term_id" type="string" value="gyroscope"/>
+    <param name="expr" type="string" value="TermList(TermFloat(m.twist.angular.x), TermFloat(m.twist.angular.y), TermFloat(m.twist.angular.z))"/>
+  </node>
+
+  <node name="mapper_joint_pos" pkg="memory" type="mapper">
+    <param name="topic_name" type="string" value="/joint_states"/>
+    <param name="topic_type" type="string" value="sensor_msgs/JointState"/>
+    <param name="timeout" type="int" value="4000"/>
+    <param name="term_id" type="string" value="joint_pos"/>
+    <param name="expr" type="string" value="TermList(TermFloat(m.position[m.name.index('left_track_j')]), TermFloat(m.position[m.name.index('right_track_j')]), TermFloat(m.position[m.name.index('front_left_flipper_j')]), TermFloat(m.position[m.name.index('front_right_flipper_j')]), TermFloat(m.position[m.name.index('rear_left_flipper_j')]), TermFloat(m.position[m.name.index('rear_right_flipper_j')]), TermFloat(m.position[m.name.index('laser_j')]))"/>
+  </node>
+</launch>

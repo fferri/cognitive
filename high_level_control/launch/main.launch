@@ -1,0 +1,13 @@
+<launch>
+  <node name="memory_server" pkg="memory" type="server">
+    <rosparam file="$(find high_level_control)/launch/memory.yaml"/>
+  </node>
+
+  <include file="$(find high_level_control)/launch/mapper_diagnostics.launch" />
+
+  <node name="gui" pkg="mixed_initiative_gui" type="mixed_initiative_gui" />
+
+  <node pkg="indigolog" type="indigolog" name="hlc_main" args="$(find high_level_control)/hlc.pl" output="screen">
+    <rosparam file="$(find high_level_control)/launch/memory.yaml"/>
+  </node>
+</launch>

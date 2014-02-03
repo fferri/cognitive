@@ -1,0 +1,15 @@
+<package>
+  <description brief="high_level_control">
+     high_level_control
+  </description>
+  <author>Federico Ferri</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/high_level_control</url>
+  <depend package="rospy"/>
+  <depend package="indigolog"/>
+  <depend package="mixed_initiative_gui"/>
+
+</package>
+
+
