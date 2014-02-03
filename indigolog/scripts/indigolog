@@ -22,7 +22,7 @@ class Indigolog(EclipseProlog):
 
         # ROS memory integration:
         print('Creating the memory listener...')
-        self.memory_listener = MemoryListener(callback_add=self.memory_add_callback, callback_remove=self.memory_remove_callback, callback_change=self.memory_change_callback)
+        self.memory_listener = MemoryListener(ns=rospy.get_param('~memory_namespace', '/memory'), callback_add=self.memory_add_callback, callback_remove=self.memory_remove_callback, callback_change=self.memory_change_callback)
         # send add events for every term in the memory:
         for meta in self.memory_listener.store.get_all():
             self.memory_add_callback(meta, meta.src)
@@ -106,7 +106,9 @@ class Indigolog(EclipseProlog):
         self.exog_queue.put(pyclp.Compound('service_async_result', srv2term(result), pyclp.Atom(service_name), pyclp.Atom(call_id)))
 
 if __name__ == "__main__":
-    rospy.init_node('indigolog')
+    #log_level=rospy.DEBUG
+    log_level=rospy.WARN
+    rospy.init_node('indigolog', log_level=log_level)
     argv = rospy.myargv()
 
     if len(argv) <= 1:
