@@ -29,7 +29,7 @@ def show_log():
             op = 'changed'
         else:
             raise Exception('Unknown op_type: %d' % change.op_type)
-        e = '#%d: %d.%d: %s %s term %s (id=%s)' % (n, change.meta.stamp.secs, change.meta.stamp.nsecs, change.src, op, term2str(change.meta.term), change.meta.term_id)
+        e = '#%d: %d.%d: %s %s term %s (id=%s)' % (n, change.meta.stamp.secs, change.meta.stamp.nsecs, change.src, op, termmsg2str(change.meta.term), change.meta.term_id)
         n += 1
         print(e)
 
