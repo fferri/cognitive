@@ -5,6 +5,7 @@ import sys
 import thread
 import rospy
 import time
+import os
 
 from memory.lib import *
 
@@ -23,6 +24,7 @@ def print_mem(dont_set_flag=False):
     t = time.time()
     if (t - last_print) > max_print_interval:
         if want_print:
+            os.system('clear')
             print_terms_table(ml.store.mem.values())
         last_print = t
         want_print = False
